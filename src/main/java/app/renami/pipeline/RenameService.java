@@ -86,7 +86,7 @@ public final class RenameService {
     public List<RenameOperation> plan(List<Path> files, Options options, TargetResolver resolver) throws Exception {
         List<Item> items = parseAll(files);
         String mode = options.mode();
-        if (mode.equalsIgnoreCase("local")) {
+        if (mode.equalsIgnoreCase("local") || (mode.equalsIgnoreCase("auto") && datasource.networkFree())) {
             return planLocal(items, options, resolver);
         }
         boolean episodeMode = mode.equalsIgnoreCase("episode")
@@ -207,11 +207,12 @@ public final class RenameService {
         return file.resolveSibling(name + "." + MediaScanner.extension(file));
     }
 
-    /** Remove characters that are illegal or risky in file names. */
+    /** Remove characters that are illegal or risky in file names, and collapse empty format artifacts. */
     public static String sanitize(String name) {
-        String s = name.replaceAll("[/\\p{Cntrl}]", "-").trim();
-        s = s.replaceAll("\\s{2,}", " ");
-        s = s.replaceAll("[. ]+$", "");
+        String s = name.replaceAll("[/\\p{Cntrl}]", "-");
+        s = s.replaceAll("\\(\\s*\\)", " ");   // empty {y}/{t} leave bare parens
+        s = s.replaceAll("\\s{2,}", " ").trim();
+        s = s.replaceAll("[\\s._-]+$", "");
         return s.isEmpty() ? "untitled" : s;
     }
 }

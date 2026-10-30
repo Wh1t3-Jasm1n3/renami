@@ -114,9 +114,7 @@ public class PostProcessCommand implements Callable<Integer> {
         RenameService.TargetResolver resolver = output != null
                 ? RenameService.structuredResolver(template, output.toAbsolutePath())
                 : null;
-        List<RenameOperation> plan = episodeMode
-                ? service.planEpisodes(items, options, resolver)
-                : service.planMovies(items, options, resolver);
+        List<RenameOperation> plan = service.plan(candidates, options, resolver);
 
         if (plan.isEmpty()) {
             cleanup(extractedDirs);

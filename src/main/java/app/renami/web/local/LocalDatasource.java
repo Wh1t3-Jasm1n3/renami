@@ -32,4 +32,9 @@ public final class LocalDatasource implements Datasource {
     public List<MovieInfo> searchMovie(String query, int year) {
         return List.of();
     }
+
+    @Override
+    public boolean networkFree() {
+        return true;
+    }
 }

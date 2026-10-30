@@ -28,4 +28,9 @@ public interface Datasource {
     }
 
     List<MovieInfo> searchMovie(String query, int year) throws IOException;
+
+    /** True for offline datasources: the pipeline then renames from parsed filename facts only. */
+    default boolean networkFree() {
+        return false;
+    }
 }
