@@ -42,7 +42,17 @@ public class OpenSubtitlesClient { // non-final: tests substitute a stub transpo
         String url = BASE + "/subtitles?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
                 + "&languages=" + URLEncoder.encode(language, StandardCharsets.UTF_8)
                 + "&sort=download_count";
-        JsonObject json = http.get(url, auth());
+        return parseCandidates(http.get(url, auth()));
+    }
+
+    /** Exact-match search by the 64-bit moviehash (legacy endpoint, same response shape). */
+    public List<Candidate> searchByHash(long moviehash, String language) throws IOException {
+        String url = BASE + "/subtitles/search/legacy?moviehash=" + Long.toHexString(moviehash)
+                + "&languages=" + URLEncoder.encode(language, StandardCharsets.UTF_8);
+        return parseCandidates(http.get(url, auth()));
+    }
+
+    private List<Candidate> parseCandidates(JsonObject json) {
         List<Candidate> results = new ArrayList<>();
         if (json.has("data") && json.get("data").isJsonArray()) {
             for (JsonElement e : json.getAsJsonArray("data")) {

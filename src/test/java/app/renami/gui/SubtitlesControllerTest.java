@@ -19,18 +19,28 @@ class SubtitlesControllerTest {
     Path dir;
 
     private static final class StubClient extends OpenSubtitlesClient {
+        boolean queryCalled;
+        boolean hashCalled;
+
         StubClient() {
             super("stub", new HttpJson(null, false));
         }
 
         @Override
         public List<Candidate> search(String query, String language) {
+            queryCalled = true;
             if (query.equalsIgnoreCase("Inception")) {
                 return List.of(
                         new Candidate(1, language, "Inception 2010 WEBRip", 42, "srt"),
                         new Candidate(2, language, "Inception 2010 BluRay", 108, "srt"));
             }
             return List.of();
+        }
+
+        @Override
+        public List<Candidate> searchByHash(long moviehash, String language) {
+            hashCalled = true;
+            return List.of(new Candidate(99, language, "Inception 2010 EXACT HASH MATCH", 5, "srt"));
         }
 
         @Override
@@ -65,5 +75,29 @@ class SubtitlesControllerTest {
     void noMatchProducesNoRow() throws Exception {
         Path video = Files.writeString(dir.resolve("Unknown.Movie.mkv"), "x");
         assertEquals(0, new SubtitlesController(new StubClient()).preview(List.of(video), "en").size());
+    }
+
+    @Test
+    void hashMatchWinsForHashableFilesWithoutQuerySearch() throws Exception {
+        byte[] data = new byte[70_000];
+        Path video = dir.resolve("Inception.2010.1080p.mkv");
+        Files.write(video, data);
+
+        StubClient client = new StubClient();
+        List<SubtitlesController.Row> rows = new SubtitlesController(client).preview(List.of(video), "en");
+
+        assertEquals(1, rows.size());
+        assertEquals(99, rows.get(0).candidate().id()); // exact hash match, despite fewer downloads
+        assertTrue(client.hashCalled);
+        assertEquals(false, client.queryCalled);
+    }
+
+    @Test
+    void smallFilesFallBackToQuerySearch() throws Exception {
+        Path video = Files.writeString(dir.resolve("Inception.2010.mkv"), "x");
+        StubClient client = new StubClient();
+        new SubtitlesController(client).preview(List.of(video), "en");
+        assertEquals(false, client.hashCalled);
+        assertTrue(client.queryCalled);
     }
 }
