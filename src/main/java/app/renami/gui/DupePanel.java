@@ -50,6 +50,14 @@ public final class DupePanel extends JPanel {
         add(bottom, BorderLayout.SOUTH);
 
         findButton.addActionListener(e -> find());
+        FileDrop.register(this, dropped -> {
+            if (dropped.size() == 1 && Files.isDirectory(dropped.get(0))) {
+                inputField.setText(dropped.get(0).toString());
+                statusLabel.setText("folder dropped");
+            } else {
+                statusLabel.setText("drop a folder to scan for duplicates");
+            }
+        });
     }
 
     private void find() {

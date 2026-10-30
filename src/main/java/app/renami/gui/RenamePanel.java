@@ -37,6 +37,7 @@ public final class RenamePanel extends JPanel {
     private final JLabel statusLabel = new JLabel(" ");
 
     private List<Path> files = List.of();
+    private List<Path> droppedFiles = List.of();
     private List<RenameController.Row> preview = List.of();
 
     public RenamePanel() {
@@ -63,6 +64,18 @@ public final class RenamePanel extends JPanel {
         matchButton.addActionListener(e -> match());
         renameButton.addActionListener(e -> rename());
         renameButton.setEnabled(false);
+        FileDrop.register(this, this::onDrop);
+    }
+
+    private void onDrop(List<Path> dropped) {
+        if (dropped.size() == 1 && java.nio.file.Files.isDirectory(dropped.get(0))) {
+            droppedFiles = List.of();
+            inputField.setText(dropped.get(0).toString());
+            statusLabel.setText("folder dropped");
+        } else {
+            droppedFiles = dropped;
+            statusLabel.setText(dropped.size() + " files dropped");
+        }
     }
 
     private JButton folderChooserButton() {
@@ -99,7 +112,7 @@ public final class RenamePanel extends JPanel {
         new SwingWorker<List<RenameController.Row>, Void>() {
             @Override
             protected List<RenameController.Row> doInBackground() throws Exception {
-                files = MediaScanner.scan(input);
+                files = droppedFiles.isEmpty() ? MediaScanner.scan(input) : droppedFiles;
                 if (files.isEmpty()) {
                     throw new IllegalStateException("no media files found under " + input);
                 }

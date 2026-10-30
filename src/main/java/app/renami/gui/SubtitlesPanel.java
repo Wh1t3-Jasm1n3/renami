@@ -8,6 +8,7 @@ import app.renami.web.opensubtitles.OpenSubtitlesClient;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -29,6 +30,7 @@ public final class SubtitlesPanel extends JPanel {
     private final JLabel statusLabel = new JLabel(" ");
 
     private List<SubtitlesController.Row> preview = List.of();
+    private List<Path> droppedFiles = List.of();
 
     public SubtitlesPanel() {
         super(new BorderLayout(8, 8));
@@ -60,6 +62,16 @@ public final class SubtitlesPanel extends JPanel {
         searchButton.addActionListener(e -> search());
         downloadButton.addActionListener(e -> download());
         downloadButton.setEnabled(false);
+        FileDrop.register(this, dropped -> {
+            if (dropped.size() == 1 && Files.isDirectory(dropped.get(0))) {
+                droppedFiles = List.of();
+                inputField.setText(dropped.get(0).toString());
+                statusLabel.setText("folder dropped");
+            } else {
+                droppedFiles = dropped;
+                statusLabel.setText(dropped.size() + " files dropped");
+            }
+        });
     }
 
     private OpenSubtitlesClient createClient() {
@@ -78,7 +90,7 @@ public final class SubtitlesPanel extends JPanel {
         new SwingWorker<List<SubtitlesController.Row>, Void>() {
             @Override
             protected List<SubtitlesController.Row> doInBackground() throws Exception {
-                List<Path> files = MediaScanner.scan(input);
+                List<Path> files = droppedFiles.isEmpty() ? MediaScanner.scan(input) : droppedFiles;
                 if (files.isEmpty()) {
                     throw new IllegalStateException("no media files found under " + input);
                 }
