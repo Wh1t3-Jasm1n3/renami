@@ -70,6 +70,47 @@ class ChecksumTest {
     }
 
     @Test
+    void ed2kSmallFileEqualsMd5() throws Exception {
+        Path file = dir.resolve("hello.txt");
+        Files.writeString(file, "hello world\n");
+        assertEquals(HashType.MD5.hex(file), HashType.ED2K.hex(file));
+    }
+
+    @Test
+    void ed2kChunksFilesOver4MiB() throws Exception {
+        // 4 MiB + 1 byte → MD5 over the concatenated MD5s of the two chunks
+        byte[] payload = new byte[4 * 1024 * 1024 + 1];
+        java.util.Arrays.fill(payload, (byte) 42);
+        Path file = dir.resolve("big.bin");
+        Files.write(file, payload);
+
+        java.security.MessageDigest md5 = java.security.MessageDigest.getInstance("MD5");
+        md5.update(payload, 0, 4 * 1024 * 1024);
+        byte[] chunk1 = md5.digest();
+        md5.reset();
+        md5.update(payload, 4 * 1024 * 1024, 1);
+        byte[] chunk2 = md5.digest();
+        md5.reset();
+        md5.update(chunk1);
+        md5.update(chunk2);
+        String expected = java.util.HexFormat.of().formatHex(md5.digest());
+
+        assertEquals(expected, HashType.ED2K.hex(file));
+        assertTrue(!expected.equals(HashType.MD5.hex(file))); // chunked hash differs from plain MD5
+    }
+
+    @Test
+    void sidecarAlgorithmHeaderRoundTrip() throws Exception {
+        Path file = dir.resolve("movie.mkv");
+        Files.writeString(file, "content");
+        Path ed2kFile = dir.resolve("checksums.ed2k");
+        VerificationFile.write(ed2kFile,
+                List.of(new VerificationFile.Entry("movie.mkv", HashType.ED2K.hex(file))), HashType.ED2K);
+        assertEquals(HashType.ED2K, VerificationFile.readAlgorithm(ed2kFile));
+        assertEquals(HashType.ED2K, VerificationFile.defaultAlgorithm(ed2kFile, HashType.SHA256));
+    }
+
+    @Test
     void partialHashMatchesOnlyForIdenticalPrefixes() throws Exception {
         Path a = dir.resolve("a.bin");
         Path b = dir.resolve("b.bin");

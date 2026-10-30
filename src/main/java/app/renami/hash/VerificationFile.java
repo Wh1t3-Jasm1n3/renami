@@ -46,7 +46,15 @@ public final class VerificationFile {
     }
 
     public static void write(Path file, List<Entry> entries) throws IOException {
+        write(file, entries, null);
+    }
+
+    public static void write(Path file, List<Entry> entries, HashType algorithm) throws IOException {
         StringBuilder out = new StringBuilder();
+        if (algorithm != null) {
+            // header lets --verify pick the right algorithm even when digests are ambiguous (MD5 vs ED2K)
+            out.append("; algorithm=").append(algorithm.name().toLowerCase(Locale.ROOT)).append('\n');
+        }
         String ext = extension(file);
         boolean sfv = ext.equals("sfv");
         for (Entry entry : entries) {
@@ -60,10 +68,33 @@ public final class VerificationFile {
         Files.writeString(file, out.toString(), StandardCharsets.UTF_8);
     }
 
+    /** Algorithm declared in a sidecar header comment, or null when absent. */
+    public static HashType readAlgorithm(Path file) throws IOException {
+        for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
+            String trimmed = line.trim();
+            if (!(trimmed.startsWith(";") || trimmed.startsWith("#"))) {
+                if (!trimmed.isEmpty()) {
+                    return null; // header section ended
+                }
+                continue;
+            }
+            String body = trimmed.substring(1).trim();
+            if (body.startsWith("algorithm=")) {
+                try {
+                    return HashType.parse(body.substring("algorithm=".length()));
+                } catch (IllegalArgumentException e) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     /** Default algorithm for a sidecar extension. */
     public static HashType defaultAlgorithm(Path file, HashType fallback) {
         return switch (extension(file)) {
             case "sfv", "md5" -> HashType.MD5;
+            case "ed2k" -> HashType.ED2K;
             case "sha1" -> HashType.SHA1;
             case "sha256", "sha" -> HashType.SHA256;
             case "crc" -> HashType.CRC32;

@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 
-@Command(name = "checksum", description = "Generate or verify checksum sidecar files (SFV/MD5/SHA1/SHA256/CRC32).", mixinStandardHelpOptions = true)
+@Command(name = "checksum", description = "Generate or verify checksum sidecar files (SFV/MD5/ED2K/SHA1/SHA256/CRC32).", mixinStandardHelpOptions = true)
 public class ChecksumCommand implements Callable<Integer> {
 
     @Parameters(index = "0", paramLabel = "INPUT", description = "file or folder to hash (ignored with --verify)")
     Path input;
 
-    @Option(names = "--algo", defaultValue = "sha256", description = "crc32 | md5 | sha1 | sha256 (default: ${DEFAULT-VALUE})")
+    @Option(names = "--algo", defaultValue = "sha256", description = "crc32 | md5 | ed2k | sha1 | sha256 (default: ${DEFAULT-VALUE})")
     String algo;
 
     @Option(names = "--write", description = "write a sidecar file, e.g. checksums.sfv or checksums.sha256")
@@ -43,7 +43,7 @@ public class ChecksumCommand implements Callable<Integer> {
             entries.add(new VerificationFile.Entry(relative, type.hex(file)));
         }
         if (write != null) {
-            VerificationFile.write(write, entries);
+            VerificationFile.write(write, entries, type);
             System.out.println(entries.size() + " entries written to " + write);
         } else {
             for (VerificationFile.Entry entry : entries) {
@@ -60,9 +60,10 @@ public class ChecksumCommand implements Callable<Integer> {
             return 2;
         }
         Path base = verify.toAbsolutePath().getParent();
+        HashType declared = VerificationFile.readAlgorithm(verify);
         int ok = 0, mismatch = 0, missing = 0;
         for (VerificationFile.Entry entry : entries) {
-            HashType type = HashType.byHexLength(entry.hash().length());
+            HashType type = declared != null ? declared : HashType.byHexLength(entry.hash().length());
             if (type == null) {
                 System.out.println("UNKNOWN  " + entry.name() + " (digest length " + entry.hash().length() + ")");
                 mismatch++;
