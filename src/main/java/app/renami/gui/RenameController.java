@@ -4,6 +4,7 @@ import app.renami.pipeline.RenameService;
 import app.renami.rename.ConflictPolicy;
 import app.renami.rename.RenameExecutor;
 import app.renami.rename.RenameOperation;
+import app.renami.rename.TransferAction;
 import app.renami.web.Datasource;
 
 import java.nio.file.Path;
@@ -19,6 +20,13 @@ import java.util.Set;
 public final class RenameController {
 
     public record Row(Path source, Path target, String status) {
+
+        /** True when a transfer happened (verb status), not a preview or skip state. */
+        public boolean applied() {
+            return status.equals("renamed") || status.equals("moved") || status.equals("copied")
+                    || status.equals("hardlinked") || status.equals("symlinked")
+                    || status.startsWith("copied (");
+        }
     }
 
     private final Datasource datasource;
@@ -45,11 +53,15 @@ public final class RenameController {
     }
 
     public List<Row> apply(List<Row> preview, ConflictPolicy conflict) throws Exception {
+        return apply(preview, conflict, TransferAction.RENAME);
+    }
+
+    public List<Row> apply(List<Row> preview, ConflictPolicy conflict, TransferAction action) throws Exception {
         List<RenameOperation> operations = preview.stream()
                 .filter(r -> r.status().equals("rename"))
                 .map(r -> new RenameOperation(r.source(), r.target()))
                 .toList();
-        RenameExecutor executor = new RenameExecutor(conflict, false);
+        RenameExecutor executor = new RenameExecutor(conflict, action);
         List<Row> applied = new ArrayList<>();
         for (RenameExecutor.Result result : executor.apply(operations)) {
             applied.add(new Row(result.operation().source(), result.actualTarget(), result.status()));

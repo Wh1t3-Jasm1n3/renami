@@ -8,6 +8,7 @@ import app.renami.rename.ConflictPolicy;
 import app.renami.rename.HistoryStore;
 import app.renami.rename.RenameExecutor;
 import app.renami.rename.RenameOperation;
+import app.renami.rename.TransferAction;
 import app.renami.script.ScriptRuntime;
 import app.renami.util.Config;
 import app.renami.web.Datasource;
@@ -57,6 +58,10 @@ public class PostProcessCommand implements Callable<Integer> {
     @Option(names = "--conflict", defaultValue = "INDEX", description = "FAIL | SKIP | OVERWRITE | INDEX (default: ${DEFAULT-VALUE})")
     ConflictPolicy conflict = ConflictPolicy.INDEX;
 
+    @Option(names = "--action", defaultValue = "rename",
+            description = "transfer mode: " + TransferAction.CHOICES + " (default: ${DEFAULT-VALUE})")
+    String action = "rename";
+
     @Option(names = "--min-score", defaultValue = "0.60", description = "minimum match score 0..1 (default: ${DEFAULT-VALUE})")
     double minScore = 0.60;
 
@@ -82,6 +87,13 @@ public class PostProcessCommand implements Callable<Integer> {
         try {
             datasource = createDatasource(config);
         } catch (IllegalStateException e) {
+            System.err.println("error: " + e.getMessage());
+            return 2;
+        }
+        TransferAction transferAction;
+        try {
+            transferAction = TransferAction.parse(action);
+        } catch (IllegalArgumentException e) {
             System.err.println("error: " + e.getMessage());
             return 2;
         }
@@ -132,13 +144,13 @@ public class PostProcessCommand implements Callable<Integer> {
             return 0;
         }
 
-        RenameExecutor executor = new RenameExecutor(conflict, false);
+        RenameExecutor executor = new RenameExecutor(conflict, transferAction);
         List<RenameExecutor.Result> results = executor.apply(plan);
         List<RenameOperation> applied = results.stream()
-                .filter(r -> r.status().equals("renamed"))
+                .filter(RenameExecutor.Result::applied)
                 .map(RenameExecutor.Result::operation)
                 .toList();
-        createHistoryStore().record(applied);
+        createHistoryStore().record(applied, transferAction);
         for (RenameExecutor.Result r : results) {
             System.out.println("[" + r.status() + "] " + relativize(r.operation().source()) + "  →  " + r.actualTarget());
         }
@@ -158,7 +170,7 @@ public class PostProcessCommand implements Callable<Integer> {
         }
         ScriptRuntime runtime = new ScriptRuntime(ScriptRuntime.parseDefs(definitions));
         for (RenameExecutor.Result r : results) {
-            if (!r.status().equals("renamed")) {
+            if (!r.applied()) {
                 continue;
             }
             Path source = r.operation().source();
@@ -172,7 +184,7 @@ public class PostProcessCommand implements Callable<Integer> {
 
     /** Only delete an archive when everything extracted from it was processed successfully. */
     private void deleteArchives(List<Path> archives, List<RenameExecutor.Result> results) throws IOException {
-        boolean allProcessed = results.stream().allMatch(r -> r.status().equals("renamed") || r.status().equals("unchanged"));
+        boolean allProcessed = results.stream().allMatch(r -> r.applied() || r.status().equals("unchanged"));
         if (!allProcessed) {
             System.err.println("--clean: keeping archives (not all contents processed)");
             return;

@@ -32,8 +32,8 @@ app.renami
 │   ├── NameScorer       normalized Levenshtein + token Jaccard → 0..1
 │   └── EpisodeMatcher   show scoring + episode assignment
 ├── format               FormatEngine: {groovy expressions} against a Binding
-├── rename               RenameOperation / ConflictPolicy / RenameExecutor
-│   └── HistoryStore     JSONL journal in ~/.renami + batch undo
+├── rename               RenameOperation / ConflictPolicy / TransferAction / RenameExecutor
+│   └── HistoryStore     JSONL journal in ~/.renami + batch undo (ops carry the transfer verb)
 ├── hash                 HashType (MD5/SHA/ED2K/CRC32), SFV-style sidecars, OpenSubtitles moviehash
 ├── archive              ArchiveTool: list/extract via 7z/tar/unzip
 ├── audio                Fingerprinter: fpcalc wrapper for AcouSTID lookups
@@ -54,8 +54,8 @@ scan → parse (ReleaseInfo) → group (movie | per-show episodes)
      → Datasource.search → NameScorer picks best candidate (threshold-gated)
      → EpisodeMatcher assigns episodes (number match + title similarity)
      → FormatEngine renders target names
-     → RenameExecutor (dry-run default, conflict policy)
-     → HistoryStore.journal  ──►  renami undo
+     → RenameExecutor (dry-run default, conflict policy, TransferAction mode)
+     → HistoryStore.journal  ──►  renami undo (verb-aware: restores moves, deletes copies/links)
 ```
 
 ## Design decisions
@@ -76,3 +76,9 @@ scan → parse (ReleaseInfo) → group (movie | per-show episodes)
   anime pipeline needs. Because anime are published under several names, every known title of a
   search hit becomes its own match candidate, which is what lets a romaji filename match an
   English-language record.
+- **Transfer mode is part of the journal** — `--action rename|move|copy|hardlink|symlink`
+  (FileBot-style) is recorded as a verb per op, so `undo` knows whether to move a file back
+  (rename/move) or delete the created entry (copy/hardlink/symlink). Undo refuses to delete a
+  copy when the source has since disappeared. Hardlinks degrade to a copy across filesystems
+  instead of failing the batch; a case-only target on a case-insensitive filesystem is refused
+  for non-consuming modes because it would overwrite the source with itself.

@@ -19,7 +19,8 @@ import java.util.UUID;
 
 /**
  * Append-only JSONL journal of rename batches in ~/.renami/history.jsonl.
- * Each batch: {"id":…,"time":…,"undone":false,"ops":[{"from":…,"to":…}]}
+ * Each batch: {"id":…,"time":…,"undone":false,"ops":[["from","to","verb"],…]}
+ * (journals written before 1.1 store two-element ops and are read as "renamed").
  */
 public final class HistoryStore {
 
@@ -39,10 +40,14 @@ public final class HistoryStore {
     }
 
     public void record(List<RenameOperation> applied) throws IOException {
+        record(applied, TransferAction.RENAME);
+    }
+
+    public void record(List<RenameOperation> applied, TransferAction action) throws IOException {
         Files.createDirectories(file.getParent());
         List<String[]> ops = new ArrayList<>();
         for (RenameOperation op : applied) {
-            ops.add(new String[]{op.source().toString(), op.target().toString()});
+            ops.add(new String[]{op.source().toString(), op.target().toString(), action.verb()});
         }
         JsonObject batch = new JsonObject();
         batch.addProperty("id", UUID.randomUUID().toString());
@@ -74,7 +79,8 @@ public final class HistoryStore {
                 List<String[]> ops = new ArrayList<>();
                 o.getAsJsonArray("ops").forEach(e -> {
                     var arr = e.getAsJsonArray();
-                    ops.add(new String[]{arr.get(0).getAsString(), arr.get(1).getAsString()});
+                    String verb = arr.size() > 2 ? arr.get(2).getAsString() : "renamed";
+                    ops.add(new String[]{arr.get(0).getAsString(), arr.get(1).getAsString(), verb});
                 });
                 return Optional.of(new Batch(id, o.get("time").getAsLong(), false, ops));
             }

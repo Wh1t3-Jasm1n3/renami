@@ -7,6 +7,7 @@ import app.renami.rename.ConflictPolicy;
 import app.renami.rename.HistoryStore;
 import app.renami.rename.RenameExecutor;
 import app.renami.rename.RenameOperation;
+import app.renami.rename.TransferAction;
 import app.renami.util.Config;
 import app.renami.web.acoustid.AcoustIDClient;
 import picocli.CommandLine.Command;
@@ -89,11 +90,11 @@ public class TrackCommand implements Callable<Integer> {
             System.out.println(plan.size() + " operations planned. Re-run with --apply to execute.");
             return 0;
         }
-        List<RenameExecutor.Result> results = new RenameExecutor(ConflictPolicy.FAIL, false).apply(plan);
+        List<RenameExecutor.Result> results = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.RENAME).apply(plan);
         createHistoryStore().record(results.stream()
-                .filter(r -> r.status().equals("renamed"))
+                .filter(RenameExecutor.Result::applied)
                 .map(RenameExecutor.Result::operation)
-                .toList());
+                .toList(), TransferAction.RENAME);
         for (RenameExecutor.Result r : results) {
             System.out.println("[" + r.status() + "] " + r.operation().source().getFileName() + "  →  " + r.actualTarget().getFileName());
         }

@@ -2,24 +2,33 @@ package app.renami.rename;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Applies rename operations with conflict handling and case-safety. */
+/** Applies rename operations with conflict handling, case-safety and transfer mode. */
 public final class RenameExecutor {
 
     public record Result(RenameOperation operation, String status, Path actualTarget) {
+
+        /** True when the transfer actually happened, so it can be journalled and undone. */
+        public boolean applied() {
+            return status.equals("renamed") || status.equals("moved") || status.equals("copied")
+                    || status.equals("hardlinked") || status.equals("symlinked")
+                    || status.startsWith("copied (");
+        }
     }
 
     private final ConflictPolicy conflictPolicy;
-    private final boolean hardlink;
+    private final TransferAction action;
 
-    public RenameExecutor(ConflictPolicy conflictPolicy, boolean hardlink) {
+    public RenameExecutor(ConflictPolicy conflictPolicy, TransferAction action) {
         this.conflictPolicy = conflictPolicy;
-        this.hardlink = hardlink;
+        this.action = action;
     }
 
     public List<Result> apply(List<RenameOperation> operations) throws IOException {
@@ -34,8 +43,13 @@ public final class RenameExecutor {
                 results.add(new Result(op, "skipped (conflict)", op.target()));
                 continue;
             }
-            move(op.source(), target);
-            results.add(new Result(op, hardlink ? "hardlinked" : "renamed", target));
+            if (!action.consumesSource() && isSameFile(op.source(), target)) {
+                // A case-only target on a case-insensitive filesystem would copy/hardlink a file
+                // onto itself and destroy data; refuse instead.
+                results.add(new Result(op, "skipped (same file)", target));
+                continue;
+            }
+            results.add(new Result(op, transfer(op.source(), target), target));
         }
         return results;
     }
@@ -86,14 +100,46 @@ public final class RenameExecutor {
         }
     }
 
-    private void move(Path source, Path target) throws IOException {
+    /** @return the status word to report (the action verb, or a fallback note when the FS refused it) */
+    private String transfer(Path source, Path target) throws IOException {
         Files.createDirectories(target.getParent());
+        return switch (action) {
+            case RENAME, MOVE -> {
+                relocate(source, target);
+                yield action.verb();
+            }
+            case COPY -> {
+                Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+                yield action.verb();
+            }
+            case HARDLINK -> {
+                try {
+                    unlinkExistingTarget(target);
+                    Files.createLink(target, source);
+                    yield action.verb();
+                } catch (FileSystemException | UnsupportedOperationException e) {
+                    // Cross-device, or a filesystem without hardlink support: degrade to a copy so
+                    // the batch still completes, and say so.
+                    Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+                    yield "copied (hardlink unsupported: " + e.getMessage() + ")";
+                }
+            }
+            case SYMLINK -> {
+                try {
+                    unlinkExistingTarget(target);
+                    Files.createSymbolicLink(target, source.toAbsolutePath());
+                    yield action.verb();
+                } catch (FileSystemException | UnsupportedOperationException e) {
+                    Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+                    yield "copied (symlink unsupported: " + e.getMessage() + ")";
+                }
+            }
+        };
+    }
+
+    private void relocate(Path source, Path target) throws IOException {
         boolean samePath = source.toAbsolutePath().normalize().equals(target.toAbsolutePath().normalize());
         if (samePath) {
-            return;
-        }
-        if (hardlink) {
-            Files.createLink(target, source);
             return;
         }
         // case-only rename on case-insensitive filesystems needs a two-phase move
@@ -109,6 +155,21 @@ public final class RenameExecutor {
             }
         } catch (AtomicMoveNotSupportedException e) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /** OVERWRITE conflicts must remove the old entry before link creation, which never replaces. */
+    private void unlinkExistingTarget(Path target) throws IOException {
+        if (conflictPolicy == ConflictPolicy.OVERWRITE && Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+            Files.delete(target);
+        }
+    }
+
+    private static boolean isSameFile(Path a, Path b) {
+        try {
+            return Files.isSameFile(a, b);
+        } catch (IOException e) {
+            return false;
         }
     }
 }

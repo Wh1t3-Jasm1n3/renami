@@ -3,6 +3,7 @@ package app.renami.rename;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
@@ -31,5 +32,20 @@ class HistoryStoreTest {
 
         store.markUndone(batch.get().id());
         assertTrue(store.lastActiveBatch().isEmpty(), "batch must not be returned after undo");
+    }
+
+    @Test
+    void recordsTransferVerb() throws Exception {
+        HistoryStore store = new HistoryStore(dir.resolve("history.jsonl"));
+        store.record(java.util.List.of(new RenameOperation(dir.resolve("a.mkv"), dir.resolve("b.mkv"))),
+                TransferAction.HARDLINK);
+        assertEquals("hardlinked", store.lastActiveBatch().orElseThrow().ops().get(0)[2]);
+    }
+
+    @Test
+    void legacyTwoElementOpsReadAsRenamed() throws Exception {
+        Path file = dir.resolve("history.jsonl");
+        Files.writeString(file, "{\"id\":\"x\",\"time\":1,\"undone\":false,\"ops\":[[\"/a\",\"/b\"]]}\n");
+        assertEquals("renamed", new HistoryStore(file).lastActiveBatch().orElseThrow().ops().get(0)[2]);
     }
 }

@@ -19,7 +19,9 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
 - 🧠 **Fuzzy matching** — normalized Levenshtein + token-overlap scoring
 - 📝 **Format engine** — Groovy-backed `{expressions}` (e.g. `{n} - {s00e00} - {t}`),
   `/` in templates creates folder hierarchies
-- 🔁 **Safe renaming** — dry-run by default, conflict policies, JSONL history + `undo`
+- 🔁 **Safe renaming** — dry-run by default, conflict policies, JSONL history + `undo`;
+  `--action rename|move|copy|hardlink|symlink` transfer modes (undo deletes created
+  copies/links instead of moving files back)
 - 🖥 **Desktop UI** — `renami gui` (Swing rename panel); bare `renami` opens it too
 - 📦 **Archives** — list/extract zip/tar/7z via native tools; `post-process` renames
   contents directly and can `--clean` processed archives
@@ -43,6 +45,7 @@ $BIN rename /path/to/tv            # dry-run preview
 $BIN rename /path/to/tv --apply
 $BIN rename ~/AniMe --db kitsu --order absolute   # anime: key-free, romaji or english titles
 $BIN post-process ~/Downloads --apply --clean -o ~/Media   # archives + structured output
+$BIN post-process ~/Downloads --apply --action hardlink -o ~/Media  # build a library without duplicating data
 $BIN subtitles /path/to/tv --lang en --apply
 $BIN track ~/Music --apply         # needs `brew install chromaprint`
 $BIN dupe /path/to/media
@@ -81,7 +84,8 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 0.8 | Anime absolute episode ordering | ✅ |
 | 0.9 | ED2K hashes, `filter` command, `list --format`, GUI Subtitles/Duplicates tabs, drag & drop | ✅ |
 | 1.0 | jpackage `.app` + generated icon, anime datasource (Kitsu) and TheXEM mappings, subtitle hash matching | ✅ |
-| 1.1 | `--action copy/link` modes, companion-file import, folder watch | 🔜 |
+| 1.1 | `--action rename/move/copy/hardlink/symlink` transfer modes with verb-aware undo | ✅ |
+| 1.2 | companion-file import, folder watch | 🔜 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 

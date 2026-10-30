@@ -7,6 +7,7 @@ import app.renami.rename.ConflictPolicy;
 import app.renami.rename.HistoryStore;
 import app.renami.rename.RenameExecutor;
 import app.renami.rename.RenameOperation;
+import app.renami.rename.TransferAction;
 import app.renami.script.ScriptRuntime;
 import app.renami.util.Config;
 import app.renami.web.Datasource;
@@ -42,7 +43,11 @@ public class RenameCommand implements Callable<Integer> {
     @Option(names = "--conflict", defaultValue = "FAIL", description = "FAIL | SKIP | OVERWRITE | INDEX (default: ${DEFAULT-VALUE})")
     ConflictPolicy conflict = ConflictPolicy.FAIL;
 
-    @Option(names = "--hardlink", description = "create hardlinks instead of moving files")
+    @Option(names = "--action", defaultValue = "rename",
+            description = "transfer mode: " + TransferAction.CHOICES + " (default: ${DEFAULT-VALUE})")
+    String action = "rename";
+
+    @Option(names = "--hardlink", description = "deprecated alias for --action hardlink")
     boolean hardlink;
 
     @Option(names = "--min-score", defaultValue = "0.60", description = "minimum match score 0..1 (default: ${DEFAULT-VALUE})")
@@ -70,6 +75,17 @@ public class RenameCommand implements Callable<Integer> {
             System.err.println("error: " + e.getMessage());
             return 2;
         }
+        TransferAction transferAction;
+        try {
+            transferAction = TransferAction.parse(action);
+        } catch (IllegalArgumentException e) {
+            System.err.println("error: " + e.getMessage());
+            return 2;
+        }
+        if (hardlink && transferAction == TransferAction.RENAME) {
+            System.err.println("warning: --hardlink is deprecated, use --action hardlink");
+            transferAction = TransferAction.HARDLINK;
+        }
 
         List<Path> files = MediaScanner.scan(input);
         if (files.isEmpty()) {
@@ -84,11 +100,14 @@ public class RenameCommand implements Callable<Integer> {
             return 0;
         }
 
-        RenameExecutor executor = new RenameExecutor(conflict, hardlink);
+        RenameExecutor executor = new RenameExecutor(conflict, transferAction);
         if (!apply) {
             for (RenameOperation op : plan) {
                 System.out.println("[dry-run] " + op.source().getFileName() + "  →  " + op.target().getFileName());
             }
+            System.out.println();
+            System.out.println("action: " + transferAction.name().toLowerCase()
+                    + (transferAction.consumesSource() ? " (source is moved)" : " (source is kept)"));
             System.out.println();
             System.out.println(plan.size() + " operations planned. Re-run with --apply to execute.");
             return 0;
@@ -96,10 +115,10 @@ public class RenameCommand implements Callable<Integer> {
 
         List<RenameExecutor.Result> results = executor.apply(plan);
         List<RenameOperation> applied = results.stream()
-                .filter(r -> r.status().equals("renamed") || r.status().equals("hardlinked"))
+                .filter(RenameExecutor.Result::applied)
                 .map(RenameExecutor.Result::operation)
                 .toList();
-        createHistoryStore().record(applied);
+        createHistoryStore().record(applied, transferAction);
         for (RenameExecutor.Result r : results) {
             System.out.println("[" + r.status() + "] " + r.operation().source().getFileName() + "  →  " + r.actualTarget().getFileName());
         }
@@ -115,7 +134,7 @@ public class RenameCommand implements Callable<Integer> {
         }
         ScriptRuntime runtime = new ScriptRuntime(ScriptRuntime.parseDefs(definitions));
         for (RenameExecutor.Result r : results) {
-            if (!r.status().equals("renamed") && !r.status().equals("hardlinked")) {
+            if (!r.applied()) {
                 continue;
             }
             Path source = r.operation().source();

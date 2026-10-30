@@ -4,6 +4,7 @@ import app.renami.media.MediaScanner;
 import app.renami.pipeline.RenameService;
 import app.renami.rename.ConflictPolicy;
 import app.renami.rename.HistoryStore;
+import app.renami.rename.TransferAction;
 import app.renami.util.Config;
 import app.renami.web.Datasource;
 import app.renami.web.Datasources;
@@ -23,6 +24,7 @@ public final class RenamePanel extends JPanel {
     private final JTextField inputField = new JTextField(30);
     private final JComboBox<String> modeBox = new JComboBox<>(new String[]{"auto", "movie", "episode", "local"});
     private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "omdb", "kitsu", "local"});
+    private final JComboBox<String> actionBox = new JComboBox<>(new String[]{"rename", "move", "copy", "hardlink", "symlink"});
     private final JTextField formatField = new JTextField("{n} - {s00e00} - {t}", 24);
     private final DefaultTableModel tableModel =
             new DefaultTableModel(new Object[]{"File", "New Name", "Status"}, 0) {
@@ -50,7 +52,8 @@ public final class RenamePanel extends JPanel {
         addField(top, c, 0, "Input:", inputField, folderChooserButton());
         addField(top, c, 1, "Mode:", modeBox, null);
         addField(top, c, 2, "Database:", dbBox, null);
-        addField(top, c, 3, "Format:", formatField, null);
+        addField(top, c, 3, "Action:", actionBox, null);
+        addField(top, c, 4, "Format:", formatField, null);
 
         add(top, BorderLayout.NORTH);
         add(new JScrollPane(table), BorderLayout.CENTER);
@@ -163,12 +166,13 @@ public final class RenamePanel extends JPanel {
         new SwingWorker<List<RenameController.Row>, Void>() {
             @Override
             protected List<RenameController.Row> doInBackground() throws Exception {
+                TransferAction action = TransferAction.parse((String) actionBox.getSelectedItem());
                 RenameController controller = new RenameController(new app.renami.web.local.LocalDatasource());
-                List<RenameController.Row> applied = controller.apply(preview, ConflictPolicy.FAIL);
+                List<RenameController.Row> applied = controller.apply(preview, ConflictPolicy.FAIL, action);
                 new HistoryStore().record(applied.stream()
-                        .filter(r -> r.status().equals("renamed"))
+                        .filter(RenameController.Row::applied)
                         .map(r -> new app.renami.rename.RenameOperation(r.source(), r.target()))
-                        .toList());
+                        .toList(), action);
                 return applied;
             }
 
@@ -181,8 +185,8 @@ public final class RenamePanel extends JPanel {
                         tableModel.addRow(new Object[]{
                                 row.source().getFileName(), row.target().getFileName(), row.status()});
                     }
-                    long renamed = applied.stream().filter(r -> r.status().equals("renamed")).count();
-                    statusLabel.setText(renamed + " files renamed. Use `renami undo` to revert.");
+                    long done = applied.stream().filter(RenameController.Row::applied).count();
+                    statusLabel.setText(done + " files processed. Use `renami undo` to revert.");
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                     statusLabel.setText("rename failed");

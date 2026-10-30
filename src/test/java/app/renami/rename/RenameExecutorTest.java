@@ -25,7 +25,7 @@ class RenameExecutorTest {
                 new RenameOperation(a, dir.resolve("a-renamed.txt")),
                 new RenameOperation(b, targetB)); // conflict: a-renamed.txt now exists
 
-        List<RenameExecutor.Result> results = new RenameExecutor(ConflictPolicy.INDEX, false).apply(plan);
+        List<RenameExecutor.Result> results = new RenameExecutor(ConflictPolicy.INDEX, TransferAction.RENAME).apply(plan);
         assertEquals("renamed", results.get(0).status());
         assertEquals("renamed", results.get(1).status());
         assertEquals("a-renamed (2).txt", results.get(1).actualTarget().getFileName().toString());
@@ -36,7 +36,7 @@ class RenameExecutorTest {
     @Test
     void caseOnlyRenameOnDisk() throws Exception {
         Path f = Files.writeString(dir.resolve("movie.mkv"), "x");
-        new RenameExecutor(ConflictPolicy.FAIL, false)
+        new RenameExecutor(ConflictPolicy.FAIL, TransferAction.RENAME)
                 .apply(List.of(new RenameOperation(f, dir.resolve("Movie.mkv"))));
         assertTrue(Files.exists(dir.resolve("Movie.mkv")));
     }
@@ -44,9 +44,52 @@ class RenameExecutorTest {
     @Test
     void hardlinkKeepsSource() throws Exception {
         Path f = Files.writeString(dir.resolve("src.mkv"), "x");
-        new RenameExecutor(ConflictPolicy.FAIL, true)
-                .apply(List.of(new RenameOperation(f, dir.resolve("dst.mkv"))));
+        var result = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.HARDLINK)
+                .apply(List.of(new RenameOperation(f, dir.resolve("dst.mkv")))).get(0);
+        assertEquals("hardlinked", result.status());
         assertTrue(Files.exists(f));
-        assertTrue(Files.exists(dir.resolve("dst.mkv")));
+        assertEquals(2, Files.getAttribute(dir.resolve("dst.mkv"), "unix:nlink"));
+    }
+
+    @Test
+    void copyKeepsSourceAndDuplicatesContent() throws Exception {
+        Path f = Files.writeString(dir.resolve("src.mkv"), "payload");
+        var result = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.COPY)
+                .apply(List.of(new RenameOperation(f, dir.resolve("dst.mkv")))).get(0);
+        assertEquals("copied", result.status());
+        assertEquals("payload", Files.readString(f));
+        assertEquals("payload", Files.readString(dir.resolve("dst.mkv")));
+    }
+
+    @Test
+    void symlinkPointsAtAbsoluteSource() throws Exception {
+        Path f = Files.writeString(dir.resolve("src.mkv"), "x");
+        var result = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.SYMLINK)
+                .apply(List.of(new RenameOperation(f, dir.resolve("dst.mkv")))).get(0);
+        assertEquals("symlinked", result.status());
+        Path link = dir.resolve("dst.mkv");
+        assertTrue(Files.isSymbolicLink(link));
+        assertEquals(f.toAbsolutePath(), Files.readSymbolicLink(link));
+        assertEquals("x", Files.readString(link)); // follows the link
+    }
+
+    @Test
+    void copyOntoCaseOnlyTargetIsRefused() throws Exception {
+        Path f = Files.writeString(dir.resolve("movie.mkv"), "x");
+        var result = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.COPY)
+                .apply(List.of(new RenameOperation(f, dir.resolve("Movie.mkv")))).get(0);
+        assertEquals("skipped (same file)", result.status());
+        assertTrue(Files.exists(dir.resolve("movie.mkv")));
+    }
+
+    @Test
+    void moveAcrossFoldersConsumesSource() throws Exception {
+        Path sub = Files.createDirectories(dir.resolve("out"));
+        Path f = Files.writeString(dir.resolve("src.mkv"), "x");
+        var result = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.MOVE)
+                .apply(List.of(new RenameOperation(f, sub.resolve("dst.mkv")))).get(0);
+        assertEquals("moved", result.status());
+        assertTrue(Files.exists(sub.resolve("dst.mkv")));
+        assertTrue(!Files.exists(f));
     }
 }
