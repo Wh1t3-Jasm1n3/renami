@@ -126,6 +126,33 @@ class RenameCommandTest {
     }
 
     @Test
+    void scriptHookRunsAfterApply() throws Exception {
+        Files.writeString(dir.resolve("breaking.bad.s01e02.mkv"), "x");
+        Path script = Files.writeString(dir.resolve("hook.groovy"), """
+                new File(outFile).text = fn.name
+                """);
+
+        RenameCommand rename = new RenameCommand() {
+            @Override
+            Datasource createDatasource(Config config) {
+                return new StubDatasource();
+            }
+
+            @Override
+            HistoryStore createHistoryStore() {
+                return new HistoryStore(dir.resolve("history.jsonl"));
+            }
+        };
+        rename.input = dir;
+        rename.apply = true;
+        rename.script = script;
+        rename.definitions = List.of("outFile=" + dir.resolve("log.txt"));
+
+        assertEquals(0, rename.call());
+        assertEquals("Breaking Bad - S01E02 - Cat in the Hat.mkv", Files.readString(dir.resolve("log.txt")));
+    }
+
+    @Test
     void localModeNeedsNoNetwork() throws Exception {
         Files.writeString(dir.resolve("breaking.bad.s01e02.1080p.webdl.mkv"), "x");
 

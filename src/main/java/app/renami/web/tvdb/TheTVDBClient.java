@@ -63,20 +63,44 @@ public final class TheTVDBClient implements Datasource {
 
     @Override
     public List<EpisodeInfo> getSeason(String showId, int season) throws IOException {
-        JsonObject json = http.get(BASE + "/series/" + showId + "/episodes/default", auth());
+        return getSeason(showId, season, "default");
+    }
+
+    @Override
+    public List<EpisodeInfo> getSeason(String showId, int season, String order) throws IOException {
+        boolean allSeasons = order == null || order.equals("default");
+        String url = allSeasons
+                ? BASE + "/series/" + showId + "/episodes/default"
+                : BASE + "/series/" + showId + "/episodes/" + order + "/" + season;
+        JsonObject json = http.get(url, auth());
         List<EpisodeInfo> episodes = new ArrayList<>();
         JsonObject data = json.has("data") && json.get("data").isJsonObject() ? json.getAsJsonObject("data") : new JsonObject();
         for (JsonElement e : arr(data, "episodes")) {
             JsonObject o = e.getAsJsonObject();
             int episodeNumber = parseNumber(str(o, "number"));
+            if (episodeNumber <= 0 && o.has("airedEpisodeNumber") && !o.get("airedEpisodeNumber").isJsonNull()) {
+                episodeNumber = o.get("airedEpisodeNumber").getAsInt();
+            }
             if (episodeNumber <= 0) {
                 continue; // specials and non-numeric entries
             }
-            int seasonNumber = o.has("seasonNumber") && !o.get("seasonNumber").isJsonNull()
-                    ? o.get("seasonNumber").getAsInt() : season;
+            int seasonNumber = seasonOf(o, season);
+            if (allSeasons && seasonNumber != season) {
+                continue; // the default endpoint returns every season at once
+            }
             episodes.add(new EpisodeInfo(seasonNumber, episodeNumber, str(o, "name"), str(o, "airDate")));
         }
         return episodes;
+    }
+
+    private static int seasonOf(JsonObject episode, int fallback) {
+        if (episode.has("seasonNumber") && !episode.get("seasonNumber").isJsonNull()) {
+            return episode.get("seasonNumber").getAsInt();
+        }
+        if (episode.has("airedSeason") && !episode.get("airedSeason").isJsonNull()) {
+            return episode.get("airedSeason").getAsInt();
+        }
+        return fallback;
     }
 
     @Override

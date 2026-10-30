@@ -27,7 +27,36 @@ import java.util.Map;
  */
 public final class RenameService {
 
-    public record Options(String mode, String format, double minScore) {
+    public record Options(String mode, String format, double minScore, String order) {
+
+        public Options(String mode, String format, double minScore) {
+            this(mode, format, minScore, "default");
+        }
+    }
+
+    /** Computes the destination path for a file given its format variables. */
+    public interface TargetResolver {
+        Path resolve(Path file, Map<String, Object> vars);
+    }
+
+    /**
+     * Structured resolver for post-processing: the template may contain '/' to
+     * create folder hierarchies under outputRoot, e.g. "{n}/Season {s}/{n} - {s00e00}".
+     */
+    public static TargetResolver structuredResolver(String template, Path outputRoot) {
+        return (file, vars) -> {
+            StringBuilder relative = new StringBuilder();
+            for (String segment : FormatEngine.format(template, vars).split("/")) {
+                String clean = sanitize(segment);
+                if (!clean.isEmpty()) {
+                    if (relative.length() > 0) {
+                        relative.append('/');
+                    }
+                    relative.append(clean);
+                }
+            }
+            return outputRoot.resolve(relative + "." + MediaScanner.extension(file));
+        };
     }
 
     public record Item(Path file, ReleaseInfo info) {
@@ -51,18 +80,26 @@ public final class RenameService {
     }
 
     public List<RenameOperation> plan(List<Path> files, Options options) throws Exception {
+        return plan(files, options, null);
+    }
+
+    public List<RenameOperation> plan(List<Path> files, Options options, TargetResolver resolver) throws Exception {
         List<Item> items = parseAll(files);
         String mode = options.mode();
         if (mode.equalsIgnoreCase("local")) {
-            return planLocal(items, options);
+            return planLocal(items, options, resolver);
         }
         boolean episodeMode = mode.equalsIgnoreCase("episode")
                 || (mode.equalsIgnoreCase("auto") && items.stream().anyMatch(i -> i.info().hasEpisode()));
-        return episodeMode ? planEpisodes(items, options) : planMovies(items, options);
+        return episodeMode ? planEpisodes(items, options, resolver) : planMovies(items, options, resolver);
     }
 
     /** Episode mode: group by title guess, one lookup per show, per-episode titles from the API. */
     public List<RenameOperation> planEpisodes(List<Item> items, Options options) throws Exception {
+        return planEpisodes(items, options, null);
+    }
+
+    public List<RenameOperation> planEpisodes(List<Item> items, Options options, TargetResolver resolver) throws Exception {
         Map<String, List<Item>> byShow = new LinkedHashMap<>();
         for (Item item : items) {
             if (item.info().hasEpisode()) {
@@ -85,23 +122,25 @@ public final class RenameService {
             for (Item item : group) {
                 EpisodeNumber ep = item.info().episode();
                 String episodeTitle = "";
-                for (EpisodeInfo info : datasource.getSeason(show.id(), ep.season())) {
-                    if (info.episode() == ep.episode()) {
+                for (EpisodeInfo info : datasource.getSeason(show.id(), ep.season(), options.order())) {
+                    if (info.season() == ep.season() && info.episode() == ep.episode()) {
                         episodeTitle = info.name() == null ? "" : info.name();
                         break;
                     }
                 }
                 Map<String, Object> vars = FormatEngine.standardVars(
                         show.name(), show.year(), ep.format(), episodeTitle, ep.season(), ep.episode());
-                String name = sanitize(FormatEngine.format(template, vars));
-                Path target = item.file().resolveSibling(name + "." + MediaScanner.extension(item.file()));
-                plan.add(new RenameOperation(item.file(), target));
+                plan.add(new RenameOperation(item.file(), targetFor(item.file(), vars, template, resolver)));
             }
         }
         return plan;
     }
 
     public List<RenameOperation> planMovies(List<Item> items, Options options) throws Exception {
+        return planMovies(items, options, null);
+    }
+
+    public List<RenameOperation> planMovies(List<Item> items, Options options, TargetResolver resolver) throws Exception {
         List<RenameOperation> plan = new ArrayList<>();
         String template = options.format() != null ? options.format() : "{n} ({y})";
         for (Item item : items) {
@@ -115,15 +154,17 @@ public final class RenameService {
             }
             log.println("match: \"" + item.info().titleGuess() + "\"  →  " + best.title() + " (" + best.year() + ")");
             Map<String, Object> vars = FormatEngine.standardVars(best.title(), best.year(), null, null, null, null);
-            String name = sanitize(FormatEngine.format(template, vars));
-            Path target = item.file().resolveSibling(name + "." + MediaScanner.extension(item.file()));
-            plan.add(new RenameOperation(item.file(), target));
+            plan.add(new RenameOperation(item.file(), targetFor(item.file(), vars, template, resolver)));
         }
         return plan;
     }
 
     /** Local mode: no network — rename purely from facts parsed out of the filename. */
     public List<RenameOperation> planLocal(List<Item> items, Options options) {
+        return planLocal(items, options, null);
+    }
+
+    public List<RenameOperation> planLocal(List<Item> items, Options options, TargetResolver resolver) {
         List<RenameOperation> plan = new ArrayList<>();
         for (Item item : items) {
             ReleaseInfo info = item.info();
@@ -137,9 +178,7 @@ public final class RenameService {
                 template = options.format() != null ? options.format() : "{n} ({y})";
                 vars = FormatEngine.standardVars(info.titleGuess(), info.year(), null, null, null, null);
             }
-            String name = sanitize(FormatEngine.format(template, vars));
-            Path target = item.file().resolveSibling(name + "." + MediaScanner.extension(item.file()));
-            plan.add(new RenameOperation(item.file(), target));
+            plan.add(new RenameOperation(item.file(), targetFor(item.file(), vars, template, resolver)));
         }
         return plan;
     }
@@ -158,6 +197,14 @@ public final class RenameService {
             score = Math.min(1.0, score + 0.15);
         }
         return score;
+    }
+
+    private static Path targetFor(Path file, Map<String, Object> vars, String template, TargetResolver resolver) {
+        if (resolver != null) {
+            return resolver.resolve(file, vars);
+        }
+        String name = sanitize(FormatEngine.format(template, vars));
+        return file.resolveSibling(name + "." + MediaScanner.extension(file));
     }
 
     /** Remove characters that are illegal or risky in file names. */

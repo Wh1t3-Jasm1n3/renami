@@ -19,5 +19,13 @@ public interface Datasource {
 
     List<EpisodeInfo> getSeason(String showId, int season) throws IOException;
 
+    /**
+     * Season episodes in a specific ordering. Orders: default | aired | dvd.
+     * Matters for anime and shows where broadcast and production orders differ.
+     */
+    default List<EpisodeInfo> getSeason(String showId, int season, String order) throws IOException {
+        return getSeason(showId, season);
+    }
+
     List<MovieInfo> searchMovie(String query, int year) throws IOException;
 }
