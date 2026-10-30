@@ -20,17 +20,19 @@ import java.util.Map;
  * TheTVDB v4 API client. Authentication: user-supplied API key exchanged for a
  * short-lived JWT session token (kept in memory, never cached to disk).
  */
-public final class TheTVDBClient implements Datasource {
+public class TheTVDBClient implements Datasource {
 
     private static final String BASE = "https://api4.thetvdb.com/v0";
 
     private final HttpJson http;
     private final String apiKey;
     private String token;
+    app.renami.web.xem.XemClient xem; // package-visible: tests substitute a stub
 
     public TheTVDBClient(String apiKey, HttpJson http) {
         this.apiKey = apiKey;
         this.http = http;
+        this.xem = new app.renami.web.xem.XemClient(http);
     }
 
     @Override
@@ -96,7 +98,40 @@ public final class TheTVDBClient implements Datasource {
         return episodes;
     }
 
+    /**
+     * Absolute-number resolution with a TheXEM fallback: TVDB's absolute order is
+     * community-curated and often incomplete for anime, so a miss is retried against
+     * the XEM mapping (absolute → TVDB episode id → episode details).
+     */
+    @Override
+    public EpisodeInfo mapAbsoluteEpisode(String showId, int absolute) throws IOException {
+        EpisodeInfo direct = Datasource.super.mapAbsoluteEpisode(showId, absolute);
+        if (direct != null || !showId.matches("\\d+")) {
+            return direct;
+        }
+        java.util.Optional<Long> episodeId = xem.tvdbEpisodeId(showId, absolute);
+        return episodeId.isEmpty() ? null : fetchEpisode(episodeId.get());
+    }
+
+    /** Single TVDB episode by id (v4 /episodes/{id}). */
+    EpisodeInfo fetchEpisode(long tvdbEpisodeId) throws IOException {
+        JsonObject json = http.get(BASE + "/episodes/" + tvdbEpisodeId, auth());
+        JsonObject data = json.has("data") && json.get("data").isJsonObject()
+                ? json.getAsJsonObject("data") : new JsonObject();
+        int season = data.has("airedSeason") && !data.get("airedSeason").isJsonNull()
+                ? data.get("airedSeason").getAsInt() : 1;
+        int episode = parseNumber(str(data, "airedEpisode"));
+        if (episode <= 0) {
+            episode = parseNumber(str(data, "number"));
+        }
+        if (episode <= 0) {
+            return null;
+        }
+        return new EpisodeInfo(season, episode, str(data, "name"), str(data, "firstAired"));
+    }
+
     private static int seasonOf(JsonObject episode, int fallback) {
+
         if (episode.has("seasonNumber") && !episode.get("seasonNumber").isJsonNull()) {
             return episode.get("seasonNumber").getAsInt();
         }

@@ -166,6 +166,46 @@ class RenameCommandTest {
     }
 
     @Test
+    void absoluteFallbackViaMapAbsoluteEpisode() throws Exception {
+        // TVDB absolute order empty → community mapping (XEM) path answers via the datasource seam
+        Files.writeString(dir.resolve("[SubsPlease] Steins;Gate - 05 (1080p).mkv"), "x");
+
+        RenameCommand rename = new RenameCommand() {
+            @Override
+            Datasource createDatasource(Config config) {
+                return new StubDatasource() {
+                    @Override
+                    public List<ShowInfo> searchShow(String query, int year) {
+                        return List.of(new ShowInfo("79562", "Steins;Gate", "2011-04-07"));
+                    }
+
+                    @Override
+                    public List<EpisodeInfo> getSeason(String showId, int season, String order) {
+                        return List.of(); // no absolute order available
+                    }
+
+                    @Override
+                    public EpisodeInfo mapAbsoluteEpisode(String showId, int absolute) {
+                        return absolute == 5 ? new EpisodeInfo(2, 5, "Reticent Obstinacy", "2011-08-10") : null;
+                    }
+                };
+            }
+
+            @Override
+            HistoryStore createHistoryStore() {
+                return new HistoryStore(dir.resolve("history.jsonl"));
+            }
+        };
+        rename.input = dir;
+        rename.mode = "episode";
+        rename.order = "absolute";
+        rename.apply = true;
+
+        assertEquals(0, rename.call());
+        assertTrue(Files.isRegularFile(dir.resolve("Steins;Gate - S02E05 - Reticent Obstinacy.mkv")));
+    }
+
+    @Test
     void scriptHookRunsAfterApply() throws Exception {
         Files.writeString(dir.resolve("breaking.bad.s01e02.mkv"), "x");
         Path script = Files.writeString(dir.resolve("hook.groovy"), """

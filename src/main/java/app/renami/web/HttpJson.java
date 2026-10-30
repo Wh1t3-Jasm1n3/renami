@@ -20,7 +20,7 @@ import java.util.Map;
  * JSON HTTP helper with an on-disk response cache (~/.renami/cache, 24 h TTL).
  * Being polite to metadata providers: repeated lookups for the same show never hit the network.
  */
-public final class HttpJson {
+public final class HttpJson implements JsonGet {
 
     private static final Duration TTL = Duration.ofHours(24);
 

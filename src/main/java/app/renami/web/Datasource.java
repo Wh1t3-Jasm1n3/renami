@@ -27,6 +27,20 @@ public interface Datasource {
         return getSeason(showId, season);
     }
 
+    /**
+     * Resolve an absolute (anime-style) episode number to a concrete season/episode.
+     * Datasources with their own absolute order answer from their episode list;
+     * providers without one can fall back to community mappings (see TheXEM).
+     */
+    default EpisodeInfo mapAbsoluteEpisode(String showId, int absolute) throws IOException {
+        for (EpisodeInfo info : getSeason(showId, 1, "absolute")) {
+            if (info.episode() == absolute) {
+                return info;
+            }
+        }
+        return null;
+    }
+
     List<MovieInfo> searchMovie(String query, int year) throws IOException;
 
     /** True for offline datasources: the pipeline then renames from parsed filename facts only. */

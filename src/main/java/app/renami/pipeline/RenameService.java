@@ -121,22 +121,12 @@ public final class RenameService {
                     + (show.year() > 0 ? " (" + show.year() + ")" : ""));
 
             String template = options.format() != null ? options.format() : "{n} - {s00e00} - {t}";
-            List<EpisodeInfo> absoluteList = null;
             for (Item item : group) {
                 EpisodeNumber ep = item.info().episode();
                 String episodeTitle = "";
                 if (ep == null) {
                     // absolute numbering (anime): map absolute number → season/episode via the API
-                    if (absoluteList == null) {
-                        absoluteList = datasource.getSeason(show.id(), 1, "absolute");
-                    }
-                    EpisodeInfo mapped = null;
-                    for (EpisodeInfo info : absoluteList) {
-                        if (info.episode() == item.info().absoluteEpisode()) {
-                            mapped = info;
-                            break;
-                        }
-                    }
+                    EpisodeInfo mapped = datasource.mapAbsoluteEpisode(show.id(), item.info().absoluteEpisode());
                     if (mapped == null) {
                         log.println("skip (" + item.file().getFileName() + ": absolute episode "
                                 + item.info().absoluteEpisode() + " not found for \"" + show.name() + "\")");
