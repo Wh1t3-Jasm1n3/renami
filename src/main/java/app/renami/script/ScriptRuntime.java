@@ -3,6 +3,7 @@ package app.renami.script;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
+import org.codehaus.groovy.runtime.InvokerHelper;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * Groovy script host, mirroring the scripting contract of mature media tools:
@@ -25,7 +27,7 @@ public final class ScriptRuntime {
         this.definitions = new LinkedHashMap<>(definitions);
     }
 
-    /** Parse repeatable {@code --def key=value} options. */
+    /** Parse repeatable {@code --def key=value} options; numeric/boolean values are type-coerced. */
     public static Map<String, String> parseDefs(List<String> raw) {
         Map<String, String> map = new LinkedHashMap<>();
         for (String entry : raw) {
@@ -37,15 +39,41 @@ public final class ScriptRuntime {
         return map;
     }
 
+    /** Coerce string definitions so Groovy comparisons (year >= minYear) work naturally. */
+    private static Object coerce(String value) {
+        if (value.equals("true") || value.equals("false")) {
+            return Boolean.valueOf(value);
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException ignored) {
+        }
+        try {
+            return Double.valueOf(value);
+        } catch (NumberFormatException ignored) {
+        }
+        return value;
+    }
+
     /** Compile once, run per file with a fresh binding. */
     public Object run(Path scriptFile, Map<String, Object> binding) throws IOException {
         Script script = shell.parse(scriptFile.toFile());
+        return invoke(script.getClass(), binding);
+    }
+
+    /** Compile an inline boolean expression once; evaluate per file with a fresh binding. */
+    public Predicate<Map<String, Object>> compilePredicate(String expression) {
+        Class<? extends Script> clazz = shell.parse(expression).getClass();
+        return binding -> org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
+                .castToBoolean(invoke(clazz, binding));
+    }
+
+    private Object invoke(Class<? extends Script> scriptClass, Map<String, Object> binding) {
         Binding b = new Binding();
-        definitions.forEach(b::setVariable);
+        definitions.forEach((k, v) -> b.setVariable(k, coerce(v)));
         binding.forEach(b::setVariable);
         b.setVariable("renami", new ScriptFunctions());
-        script.setBinding(b);
-        return script.run();
+        return InvokerHelper.createScript(scriptClass, b).run();
     }
 
     /** Convenience API exposed to scripts as the {@code renami} variable. */
