@@ -31,11 +31,11 @@ class RenameCommandTest {
 
         @Override
         public List<ShowInfo> searchShow(String query, int year) {
-            return List.of(new ShowInfo(1334, "Breaking Bad", "2008-01-20"));
+            return List.of(new ShowInfo("1334", "Breaking Bad", "2008-01-20"));
         }
 
         @Override
-        public List<EpisodeInfo> getSeason(int showId, int season) {
+        public List<EpisodeInfo> getSeason(String showId, int season) {
             return List.of(
                     new EpisodeInfo(1, 1, "Pilot", "2008-01-20"),
                     new EpisodeInfo(1, 2, "Cat in the Hat", "2008-01-27"));
@@ -123,5 +123,30 @@ class RenameCommandTest {
         rename.conflict = app.renami.rename.ConflictPolicy.FAIL;
         rename.minScore = 0.6;
         assertEquals(2, rename.call());
+    }
+
+    @Test
+    void localModeNeedsNoNetwork() throws Exception {
+        Files.writeString(dir.resolve("breaking.bad.s01e02.1080p.webdl.mkv"), "x");
+
+        RenameCommand rename = new RenameCommand() {
+            @Override
+            Datasource createDatasource(Config config) {
+                return new app.renami.web.local.LocalDatasource();
+            }
+
+            @Override
+            HistoryStore createHistoryStore() {
+                return new HistoryStore(dir.resolve("history.jsonl"));
+            }
+        };
+        rename.input = dir;
+        rename.apply = true;
+        rename.mode = "local";
+        rename.conflict = app.renami.rename.ConflictPolicy.FAIL;
+        rename.minScore = 0.6;
+
+        assertEquals(0, rename.call());
+        assertTrue(Files.exists(dir.resolve("breaking bad - S01E02.mkv")));
     }
 }

@@ -1,7 +1,7 @@
 package app.renami.web.model;
 
 /** A movie as returned by a datasource. */
-public record MovieInfo(int id, String title, String releaseDate) {
+public record MovieInfo(String id, String title, String releaseDate) {
 
     public int year() {
         if (releaseDate != null && releaseDate.length() >= 4) {

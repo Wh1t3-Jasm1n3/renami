@@ -1,7 +1,7 @@
 package app.renami.web.model;
 
 /** A TV series as returned by a datasource. */
-public record ShowInfo(int id, String name, String firstAirDate) {
+public record ShowInfo(String id, String name, String firstAirDate) {
 
     public int year() {
         if (firstAirDate != null && firstAirDate.length() >= 4) {
