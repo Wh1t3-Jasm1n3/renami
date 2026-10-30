@@ -67,6 +67,11 @@ public final class RenamePanel extends JPanel {
         FileDrop.register(this, this::onDrop);
     }
 
+    /** Preload files opened from the command line or Finder. */
+    public void preload(List<Path> dropped) {
+        onDrop(dropped);
+    }
+
     private void onDrop(List<Path> dropped) {
         if (dropped.size() == 1 && java.nio.file.Files.isDirectory(dropped.get(0))) {
             droppedFiles = List.of();

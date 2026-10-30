@@ -15,7 +15,10 @@ import app.renami.cli.UndoCommand;
 import app.renami.gui.RenamiFrame;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
+import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 @Command(
@@ -29,13 +32,24 @@ import java.util.concurrent.Callable;
 )
 public final class Main implements Callable<Integer> {
 
+    @Parameters(index = "0..*", paramLabel = "FILE", arity = "0..*", hidden = true,
+            description = "files opened via Finder (opens the GUI preloaded)")
+    List<Path> openedFiles = List.of();
+
     private Main() {
     }
 
-    /** Bare `renami` opens the desktop UI, like the classic media renamers. */
+    /** Bare `renami` (or Finder open-with) opens the desktop UI. */
     @Override
     public Integer call() {
-        return RenamiFrame.open();
+        for (Path file : openedFiles) {
+            if (!java.nio.file.Files.exists(file)) {
+                System.err.println("error: not found: " + file
+                        + " (did you mean a subcommand? run `renami --help`)");
+                return 2;
+            }
+        }
+        return RenamiFrame.open(openedFiles);
     }
 
     public static void main(String[] args) {

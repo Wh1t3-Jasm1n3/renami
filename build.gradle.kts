@@ -74,6 +74,8 @@ val jpackageApp by tasks.registering(Exec::class) {
         "--main-class", "app.renami.Main",
         "--dest", outDir.absolutePath,
         "--java-options", "-Xdock:name=Renami",
-        "--mac-package-name", "Renami"
+        "--mac-package-name", "Renami",
+        "--mac-package-identifier", "app.renami.Renami",
+        "--file-associations", file("$rootDir/packaging/file-associations.properties").absolutePath
     )
 }
