@@ -22,7 +22,7 @@ import java.util.Map;
  * Authentication: user-supplied API key (free tier at opensubtitles.com) plus
  * account login when private subs are needed; anonymous search works with just the key.
  */
-public final class OpenSubtitlesClient {
+public class OpenSubtitlesClient { // non-final: tests substitute a stub transport
 
     private static final String BASE = "https://api.opensubtitles.com/api/v1";
 

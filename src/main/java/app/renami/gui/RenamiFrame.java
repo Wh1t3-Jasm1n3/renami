@@ -13,6 +13,8 @@ public final class RenamiFrame extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Rename", new RenamePanel());
+        tabs.addTab("Subtitles", new SubtitlesPanel());
+        tabs.addTab("Duplicates", new DupePanel());
         add(tabs, BorderLayout.CENTER);
 
         JLabel footer = new JLabel("  Renami — open-source media renamer. Undo anytime with `renami undo`.");
