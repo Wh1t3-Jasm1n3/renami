@@ -19,17 +19,13 @@ public final class MediaInfoCliProbe implements MediaProbe {
 
     @Override
     public boolean isAvailable() {
-        try {
-            Process p = new ProcessBuilder("mediainfo", "--Version").redirectErrorStream(true).start();
-            return p.waitFor(10, TimeUnit.SECONDS) && p.exitValue() == 0;
-        } catch (Exception e) {
-            return false;
-        }
+        return app.renami.util.NativeTools.isAvailable("mediainfo");
     }
 
     @Override
     public Optional<JsonObject> probe(Path file) throws IOException, InterruptedException {
-        Process p = new ProcessBuilder("mediainfo", "--Output=JSON", file.toAbsolutePath().toString())
+        Process p = new ProcessBuilder(app.renami.util.NativeTools.resolve("mediainfo").toString(),
+                "--Output=JSON", file.toAbsolutePath().toString())
                 .redirectErrorStream(false)
                 .start();
         String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

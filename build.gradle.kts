@@ -33,4 +33,10 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // pass through opt-in flags for integration-style tests (e.g. FPCALC_TEST=on)
+    System.getenv().forEach { (k, v) ->
+        if (k.startsWith("FPCALC_") || k.startsWith("RENAMI_")) {
+            environment(k, v)
+        }
+    }
 }

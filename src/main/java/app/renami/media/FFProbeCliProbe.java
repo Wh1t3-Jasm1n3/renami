@@ -19,18 +19,13 @@ public final class FFProbeCliProbe implements MediaProbe {
 
     @Override
     public boolean isAvailable() {
-        try {
-            Process p = new ProcessBuilder("ffprobe", "-version").redirectErrorStream(true).start();
-            return p.waitFor(10, TimeUnit.SECONDS) && p.exitValue() == 0;
-        } catch (Exception e) {
-            return false;
-        }
+        return app.renami.util.NativeTools.isAvailable("ffprobe");
     }
 
     @Override
     public Optional<JsonObject> probe(Path file) throws IOException, InterruptedException {
         Process p = new ProcessBuilder(
-                "ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams",
+                app.renami.util.NativeTools.resolve("ffprobe").toString(), "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams",
                 file.toAbsolutePath().toString())
                 .redirectErrorStream(false)
                 .start();

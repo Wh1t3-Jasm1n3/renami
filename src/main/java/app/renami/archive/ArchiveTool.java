@@ -42,22 +42,34 @@ public final class ArchiveTool {
         boolean tarLike = ext.equals("tar") || ext.equals("gz") || ext.equals("bz2")
                 || ext.equals("xz") || ext.equals("tgz") || ext.equals("iso");
         if (ext.equals("zip")) {
-            if (hasTool("unzip")) {
-                return new Backend(Kind.UNZIP, "unzip");
+            String unzip = tool("unzip");
+            if (unzip != null) {
+                return new Backend(Kind.UNZIP, unzip);
             }
-            if (hasTool("tar")) {
-                return new Backend(Kind.TAR, "tar");
+            String tar = tool("tar");
+            if (tar != null) {
+                return new Backend(Kind.TAR, tar);
             }
         }
-        if (tarLike && hasTool("tar")) {
-            return new Backend(Kind.TAR, "tar");
+        if (tarLike) {
+            String tar = tool("tar");
+            if (tar != null) {
+                return new Backend(Kind.TAR, tar);
+            }
         }
         for (String tool : List.of("7zz", "7z", "7za")) {
-            if (hasTool(tool)) {
-                return new Backend(Kind.SEVEN_ZIP, tool);
+            String path = tool(tool);
+            if (path != null) {
+                return new Backend(Kind.SEVEN_ZIP, path);
             }
         }
         return null;
+    }
+
+    /** Absolute path of a native helper, resolved against PATH and Homebrew locations. */
+    private static String tool(String name) {
+        Path resolved = app.renami.util.NativeTools.resolve(name);
+        return resolved == null ? null : resolved.toString();
     }
 
     public static List<String> list(Path archive) throws IOException {
@@ -116,18 +128,6 @@ public final class ArchiveTool {
                     + " (install p7zip via `brew install p7zip` for 7z/rar support)");
         }
         return backend;
-    }
-
-    private static boolean hasTool(String name) {
-        try {
-            Process p = new ProcessBuilder(name).redirectErrorStream(true).start();
-            p.getInputStream().readAllBytes();
-            p.waitFor(5, TimeUnit.SECONDS);
-            p.destroy();
-            return true; // any tool that starts (even with a usage error) exists
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     private static int await(Process process, Path archive) throws IOException {

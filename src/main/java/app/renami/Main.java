@@ -9,6 +9,7 @@ import app.renami.cli.PostProcessCommand;
 import app.renami.cli.ProbeCommand;
 import app.renami.cli.RenameCommand;
 import app.renami.cli.SubtitlesCommand;
+import app.renami.cli.TrackCommand;
 import app.renami.cli.UndoCommand;
 import app.renami.gui.RenamiFrame;
 import picocli.CommandLine;
@@ -23,7 +24,7 @@ import java.util.concurrent.Callable;
         description = "Open-source media file renamer and organizer.",
         subcommands = {RenameCommand.class, UndoCommand.class, ProbeCommand.class,
                 ChecksumCommand.class, DupeCommand.class, ExtractCommand.class, ListCommand.class,
-                PostProcessCommand.class, GuiCommand.class, SubtitlesCommand.class}
+                PostProcessCommand.class, GuiCommand.class, SubtitlesCommand.class, TrackCommand.class}
 )
 public final class Main implements Callable<Integer> {
 
