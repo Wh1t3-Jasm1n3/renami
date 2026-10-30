@@ -14,7 +14,8 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
 - 🔍 **Filename parsing** — `S01E02`, `1x02`, `102`, anime absolute `Show - 05` patterns,
   year, quality-token stripping
 - 📡 **Metadata lookup** — TMDb, TheTVDB v4 (incl. aired/dvd/absolute episode orders),
-  OMDb, plus an offline `local` datasource; 24 h HTTP response cache
+  OMDb, Kitsu (anime, **no API key needed**), plus an offline `local` datasource;
+  24 h HTTP response cache
 - 🧠 **Fuzzy matching** — normalized Levenshtein + token-overlap scoring
 - 📝 **Format engine** — Groovy-backed `{expressions}` (e.g. `{n} - {s00e00} - {t}`),
   `/` in templates creates folder hierarchies
@@ -40,6 +41,7 @@ BIN=./build/install/renami/bin/renami
 
 $BIN rename /path/to/tv            # dry-run preview
 $BIN rename /path/to/tv --apply
+$BIN rename ~/AniMe --db kitsu --order absolute   # anime: key-free, romaji or english titles
 $BIN post-process ~/Downloads --apply --clean -o ~/Media   # archives + structured output
 $BIN subtitles /path/to/tv --lang en --apply
 $BIN track ~/Music --apply         # needs `brew install chromaprint`
@@ -49,8 +51,9 @@ $BIN undo
 $BIN gui                           # desktop rename panel
 ```
 
-No API key? Everything still works offline with `--db local` (rename purely from
-filename facts) — and `--help` on any command documents its options.
+No API key? Anime works out of the box with `--db kitsu` (Kitsu needs no credentials), and
+everything still works offline with `--db local` (rename purely from filename facts) —
+and `--help` on any command documents its options.
 
 Configuration is read from `~/.renami/config.properties` or `RENAMI_*` environment
 variables: `RENAMI_TMDB_API_KEY`, `RENAMI_TVDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
@@ -77,7 +80,8 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 0.7 | Music fingerprinting (fpcalc + AcouSTID) | ✅ |
 | 0.8 | Anime absolute episode ordering | ✅ |
 | 0.9 | ED2K hashes, `filter` command, `list --format`, GUI Subtitles/Duplicates tabs, drag & drop | ✅ |
-| 1.0 | jpackage `.app`, AniDB/XEM mappings, subtitle hash matching | 🔜 |
+| 1.0 | jpackage `.app` + generated icon, anime datasource (Kitsu) and TheXEM mappings, subtitle hash matching | ✅ |
+| 1.1 | `--action copy/link` modes, companion-file import, folder watch | 🔜 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 

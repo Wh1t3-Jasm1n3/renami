@@ -5,28 +5,47 @@ renamers (see the reverse-engineering report), but every line of code is origina
 
 ```
 app.renami
-├── Main                 picocli entry point (CLI-first; GUI arrives in 0.4)
-├── cli                  subcommands: rename, undo, probe
+├── Main                 picocli entry point; bare launch / Finder open-with opens the GUI
+├── cli                  rename, undo, probe, checksum, dupe, extract, list, filter,
+│                        post-process, subtitles, track, gui
+├── pipeline             RenameService: the UI-independent scan→match→format→plan pipeline
 ├── media                file scanning + technical probing
 │   ├── MediaScanner     recursive walk, extension-based media detection
 │   ├── MediaProbe       interface
 │   ├── MediaInfoCliProbe   shells out to `mediainfo --Output=JSON`
-│   └── FFProbeCliProbe     fallback via `ffprobe -of json`
+│   ├── FFProbeCliProbe     fallback via `ffprobe -of json`
+│   └── MediaInfoVars  MediaInfo/ffprobe facts exposed to format templates
 ├── parse                release/filename parsing
-│   ├── FileNameParser   delimiter normalization, SxxEyy / 1x02 / 102, year, quality tokens
-│   └── ReleaseInfo      parsed facts (name guess, season, episode, year)
-├── web                  metadata datasources
-│   ├── Datasource       lookup interface (search TV/movie, fetch season)
-│   ├── tmdb.TmdbClient  TMDb v3 API via java.net.http + Gson
-│   └── model            ShowInfo / EpisodeInfo / MovieInfo records
+│   ├── FileNameParser   delimiter normalization, SxxEyy / 1x02 / 102, anime absolute, year, quality tokens
+│   ├── EpisodeNumber    season/episode pair with SxxEyy rendering
+│   └── ReleaseInfo      parsed facts (name guess, season, episode, absolute, year)
+├── web                  metadata datasources behind one interface
+│   ├── Datasource       lookup interface (search TV/movie, fetch season, map absolute episode)
+│   ├── Datasources      --db selection + API-key checks
+│   ├── HttpJson         java.net.http + Gson, 24 h on-disk response cache
+│   ├── tmdb.TmdbClient  TMDb v3        · tvdb.TheTVDBClient  TheTVDB v4 (JWT, episode orders)
+│   ├── omdb.OmdbClient  OMDb          · kitsu.KitsuClient    Kitsu JSON:API (anime, key-free)
+│   ├── xem.XemClient    TheXEM anime episode mappings       · acoustid.AcoustIDClient
+│   ├── opensubtitles.OpenSubtitlesClient (v2 REST + moviehash search)
+│   └── local.LocalDatasource  offline fallback
 ├── similarity           matching engine
 │   ├── NameScorer       normalized Levenshtein + token Jaccard → 0..1
 │   └── EpisodeMatcher   show scoring + episode assignment
 ├── format               FormatEngine: {groovy expressions} against a Binding
 ├── rename               RenameOperation / ConflictPolicy / RenameExecutor
 │   └── HistoryStore     JSONL journal in ~/.renami + batch undo
-└── util                 Config (env + ~/.renami/config.properties), Json helpers
+├── hash                 HashType (MD5/SHA/ED2K/CRC32), SFV-style sidecars, OpenSubtitles moviehash
+├── archive              ArchiveTool: list/extract via 7z/tar/unzip
+├── audio                Fingerprinter: fpcalc wrapper for AcouSTID lookups
+├── script               ScriptRuntime: Groovy --script hooks + --def coercion
+├── gui                  Swing panels (Rename / Subtitles / Duplicates), FileDrop, AppIcon
+└── util                 Config (env + ~/.renami/config.properties), NativeTools, Version, Json helpers
 ```
+
+Build-time assets: `tools/GenerateIcon.java` renders the macOS iconset with Java2D
+(`gradle appIcon` → `iconutil`), and the same PNG is packaged as a classpath resource
+so the Swing window and Dock icon work in plain `installDist` builds. No binary assets
+are checked in.
 
 ## Data flow
 
@@ -49,3 +68,11 @@ scan → parse (ReleaseInfo) → group (movie | per-show episodes)
   binding, mirroring the ergonomics of established rename formats without copying their code.
 - **Undo via journal, not transactions** — append-only JSONL batches; `undo` replays in reverse.
 - **No license gate** — everything is free and open.
+- **Kitsu instead of AniDB** — the commercial original queries AniDB, but AniDB's legacy HTTP API
+  has been retired (`anime_query.php` answers 404, `api.anidb.net` is unreachable) and its
+  replacement requires a registered, cryptographically signed client. Kitsu needs no credentials,
+  carries AniDB-derived anime data, and exposes `titles` (romaji/english/native),
+  `abbreviatedTitles`, `seasonNumber`, `number` and `numberAbsolute` per episode — everything the
+  anime pipeline needs. Because anime are published under several names, every known title of a
+  search hit becomes its own match candidate, which is what lets a romaji filename match an
+  English-language record.

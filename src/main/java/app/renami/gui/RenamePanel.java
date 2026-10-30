@@ -22,7 +22,7 @@ public final class RenamePanel extends JPanel {
 
     private final JTextField inputField = new JTextField(30);
     private final JComboBox<String> modeBox = new JComboBox<>(new String[]{"auto", "movie", "episode", "local"});
-    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "omdb", "local"});
+    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "omdb", "kitsu", "local"});
     private final JTextField formatField = new JTextField("{n} - {s00e00} - {t}", 24);
     private final DefaultTableModel tableModel =
             new DefaultTableModel(new Object[]{"File", "New Name", "Status"}, 0) {
