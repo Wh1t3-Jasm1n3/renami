@@ -76,7 +76,8 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 0.6 | Subtitles (OpenSubtitles v2) | ✅ |
 | 0.7 | Music fingerprinting (fpcalc + AcouSTID) | ✅ |
 | 0.8 | Anime absolute episode ordering | ✅ |
-| 1.0 | jpackage `.app`, ED2K hashes, AniDB/XEM mappings, GUI subtitle/dupe tabs | 🔜 |
+| 0.9 | ED2K hashes, `filter` command, `list --format`, GUI Subtitles/Duplicates tabs, drag & drop | ✅ |
+| 1.0 | jpackage `.app`, AniDB/XEM mappings, subtitle hash matching | 🔜 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
