@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "app.renami"
-version = "0.1.0"
+version = "0.7.0"
 
 repositories {
     mavenCentral()
@@ -39,4 +39,41 @@ tasks.test {
             environment(k, v)
         }
     }
+}
+
+tasks.jar {
+    // stable jar name for jpackage + tests
+    archiveVersion.set("")
+    manifest {
+        attributes("Implementation-Title" to "Renami", "Implementation-Version" to project.version)
+    }
+}
+
+// macOS .app bundle (mirrors how commercial Java media tools ship a native-looking app)
+val jpackageApp by tasks.registering(Exec::class) {
+    dependsOn("installDist")
+    group = "distribution"
+    description = "Build Renami.app via jpackage (app-image, unsigned)."
+
+    val toolchains = project.extensions.getByType<JavaToolchainService>()
+    val javaExt = project.extensions.getByType<JavaPluginExtension>()
+    val jdkHome = toolchains.launcherFor(javaExt.toolchain).get().metadata.installationPath
+    val libDir = layout.buildDirectory.dir("install/renami/lib").get().asFile
+    val outDir = layout.buildDirectory.dir("jpackage").get().asFile
+
+    doFirst { outDir.deleteRecursively() }
+    // macOS bundles reject versions starting with 0; strip the leading "0." for the bundle only
+    val bundleVersion = project.version.toString().removePrefix("0.")
+    commandLine(
+        "$jdkHome/bin/jpackage",
+        "--type", "app-image",
+        "--name", "Renami",
+        "--app-version", bundleVersion,
+        "--input", libDir.absolutePath,
+        "--main-jar", "renami.jar",
+        "--main-class", "app.renami.Main",
+        "--dest", outDir.absolutePath,
+        "--java-options", "-Xdock:name=Renami",
+        "--mac-package-name", "Renami"
+    )
 }

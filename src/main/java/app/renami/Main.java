@@ -19,7 +19,7 @@ import java.util.concurrent.Callable;
 
 @Command(
         name = "renami",
-        version = "Renami 0.2.0",
+        version = "Renami",
         mixinStandardHelpOptions = true,
         description = "Open-source media file renamer and organizer.",
         subcommands = {RenameCommand.class, UndoCommand.class, ProbeCommand.class,
@@ -38,7 +38,8 @@ public final class Main implements Callable<Integer> {
     }
 
     public static void main(String[] args) {
-        int exitCode = new CommandLine(new Main()).execute(args);
-        System.exit(exitCode);
+        CommandLine cli = new CommandLine(new Main());
+        cli.getCommandSpec().versionProvider(() -> new String[]{app.renami.util.Version.full()});
+        System.exit(cli.execute(args));
     }
 }
