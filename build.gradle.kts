@@ -49,15 +49,62 @@ tasks.jar {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Application icon: generated from code (tools/GenerateIcon.java), never a
+// checked-in binary. packaging/AppIcon.* are build artifacts (see .gitignore).
+// ---------------------------------------------------------------------------
+val toolchains = project.extensions.getByType<JavaToolchainService>()
+val javaExt = project.extensions.getByType<JavaPluginExtension>()
+val jdkLauncher = toolchains.launcherFor(javaExt.toolchain)
+fun jdkBin(tool: String) = File(jdkLauncher.get().metadata.installationPath.asFile, "bin/$tool").absolutePath
+
+val iconsetDir = file("$rootDir/packaging/AppIcon.iconset")
+val icnsFile = file("$rootDir/packaging/AppIcon.icns")
+
+val generateIconPngs = tasks.register<Exec>("generateIconPngs") {
+    group = "distribution"
+    description = "Render the AppIcon.iconset PNGs with Java2D (no external assets)."
+    inputs.file(file("$rootDir/tools/GenerateIcon.java"))
+    outputs.dir(iconsetDir)
+    workingDir = rootDir
+    commandLine(jdkBin("java"), "-Djava.awt.headless=true",
+        file("$rootDir/tools/GenerateIcon.java").absolutePath)
+}
+
+val appIcon = tasks.register<Exec>("appIcon") {
+    group = "distribution"
+    description = "Assemble packaging/AppIcon.icns from the generated iconset (macOS only)."
+    dependsOn(generateIconPngs)
+    onlyIf { org.gradle.internal.os.OperatingSystem.current().isMacOsX }
+    inputs.dir(iconsetDir)
+    outputs.file(icnsFile)
+    commandLine("iconutil", "-c", "icns", iconsetDir.absolutePath, "-o", icnsFile.absolutePath)
+}
+
+// the same PNG is shipped inside the jar so the Swing UI / Dock icon works in dev builds
+val copyIconResource = tasks.register<Copy>("copyIconResource") {
+    dependsOn(generateIconPngs)
+    from(iconsetDir) {
+        include("icon_256x256.png")
+        rename { "app-icon.png" }
+    }
+    into(layout.buildDirectory.dir("generated/resources/app/renami"))
+}
+
+sourceSets.main {
+    resources.srcDir(layout.buildDirectory.dir("generated/resources"))
+}
+
+tasks.processResources {
+    dependsOn(copyIconResource)
+}
+
 // macOS .app bundle (mirrors how commercial Java media tools ship a native-looking app)
-val jpackageApp by tasks.registering(Exec::class) {
-    dependsOn("installDist")
+val jpackageApp = tasks.register<Exec>("jpackageApp") {
+    dependsOn("installDist", appIcon)
     group = "distribution"
     description = "Build Renami.app via jpackage (app-image, unsigned)."
 
-    val toolchains = project.extensions.getByType<JavaToolchainService>()
-    val javaExt = project.extensions.getByType<JavaPluginExtension>()
-    val jdkHome = toolchains.launcherFor(javaExt.toolchain).get().metadata.installationPath
     val libDir = layout.buildDirectory.dir("install/renami/lib").get().asFile
     val outDir = layout.buildDirectory.dir("jpackage").get().asFile
 
@@ -65,7 +112,7 @@ val jpackageApp by tasks.registering(Exec::class) {
     // macOS bundles reject versions starting with 0; strip the leading "0." for the bundle only
     val bundleVersion = project.version.toString().removePrefix("0.")
     commandLine(
-        "$jdkHome/bin/jpackage",
+        jdkBin("jpackage"),
         "--type", "app-image",
         "--name", "Renami",
         "--app-version", bundleVersion,
@@ -76,6 +123,7 @@ val jpackageApp by tasks.registering(Exec::class) {
         "--java-options", "-Xdock:name=Renami",
         "--mac-package-name", "Renami",
         "--mac-package-identifier", "app.renami.Renami",
+        "--icon", icnsFile.absolutePath,
         "--file-associations", file("$rootDir/packaging/file-associations.properties").absolutePath
     )
 }

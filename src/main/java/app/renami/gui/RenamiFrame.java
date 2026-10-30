@@ -17,6 +17,7 @@ public final class RenamiFrame extends JFrame {
         super("Renami");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
+        AppIcon.applyTo(this);
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Rename", renamePanel);
