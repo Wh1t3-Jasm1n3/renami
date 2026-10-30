@@ -55,6 +55,15 @@ public final class Main implements Callable<Integer> {
     public static void main(String[] args) {
         CommandLine cli = new CommandLine(new Main());
         cli.getCommandSpec().versionProvider(() -> new String[]{app.renami.util.Version.full()});
+        // provider/network failures are user-fixable: report them as a message, not a stack trace
+        cli.setExecutionExceptionHandler((ex, commandLine, parseResult) -> {
+            if (ex instanceof java.io.IOException) {
+                System.err.println("error: " + ex.getMessage());
+                return 1;
+            }
+            ex.printStackTrace(System.err);
+            return 1;
+        });
         System.exit(cli.execute(args));
     }
 }

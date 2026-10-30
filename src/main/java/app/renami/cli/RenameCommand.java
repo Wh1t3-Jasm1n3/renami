@@ -33,7 +33,7 @@ public class RenameCommand implements Callable<Integer> {
     @Option(names = "--mode", defaultValue = "auto", description = "auto | movie | episode | local (default: ${DEFAULT-VALUE})")
     String mode = "auto";
 
-    @Option(names = "--db", defaultValue = "auto", description = "auto | tmdb | tvdb | omdb | local (default: ${DEFAULT-VALUE})")
+    @Option(names = "--db", defaultValue = "auto", description = "auto | tmdb | tvdb | omdb | kitsu | local (default: ${DEFAULT-VALUE})")
     String db = "auto";
 
     @Option(names = "--format", description = "custom Groovy-backed format, e.g. \"{n} - {s00e00} - {t}\"")

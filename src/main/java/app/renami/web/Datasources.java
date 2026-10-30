@@ -1,6 +1,7 @@
 package app.renami.web;
 
 import app.renami.util.Config;
+import app.renami.web.kitsu.KitsuClient;
 import app.renami.web.local.LocalDatasource;
 import app.renami.web.omdb.OmdbClient;
 import app.renami.web.tmdb.TmdbClient;
@@ -19,15 +20,18 @@ public final class Datasources {
             case "tmdb" -> tmdb(config, http);
             case "tvdb" -> tvdb(config, http);
             case "omdb" -> omdb(config, http);
+            case "kitsu" -> new KitsuClient(http);
             case "local" -> new LocalDatasource();
             case "auto" -> {
                 if (config.get("tmdb.api.key") != null) yield tmdb(config, http);
                 if (config.get("tvdb.api.key") != null) yield tvdb(config, http);
                 if (config.get("omdb.api.key") != null) yield omdb(config, http);
                 throw new IllegalStateException(
-                        "no datasource API key configured (RENAMI_TMDB_API_KEY / RENAMI_TVDB_API_KEY / RENAMI_OMDB_API_KEY) — or use --db local");
+                        "no datasource API key configured (RENAMI_TMDB_API_KEY / RENAMI_TVDB_API_KEY / RENAMI_OMDB_API_KEY) — "
+                                + "or use the key-free --db kitsu (anime) / --db local (offline)");
             }
-            default -> throw new IllegalStateException("unknown datasource: " + db + " (use auto|tmdb|tvdb|omdb|local)");
+            default -> throw new IllegalStateException(
+                    "unknown datasource: " + db + " (use auto|tmdb|tvdb|omdb|kitsu|local)");
         };
     }
 

@@ -49,8 +49,10 @@ public final class HttpJson implements JsonGet {
         }
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(30))
-                .header("Accept", "application/json")
                 .GET();
+        if (!containsAccept(headers)) {
+            builder.header("Accept", "application/json");
+        }
         headers.forEach(builder::header);
         String body = send(builder.build());
         JsonObject json = JsonParser.parseString(body).getAsJsonObject();
@@ -64,11 +66,18 @@ public final class HttpJson implements JsonGet {
     public JsonObject post(String url, String jsonBody, Map<String, String> headers) throws IOException {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(30))
-                .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
+        if (!containsAccept(headers)) {
+            builder.header("Accept", "application/json");
+        }
         headers.forEach(builder::header);
         return JsonParser.parseString(send(builder.build())).getAsJsonObject();
+    }
+
+    /** Callers may set their own Accept (e.g. JSON:API providers reject application/json). */
+    private static boolean containsAccept(Map<String, String> headers) {
+        return headers.keySet().stream().anyMatch(k -> k.equalsIgnoreCase("Accept"));
     }
 
     private String send(HttpRequest request) throws IOException {
