@@ -8,15 +8,26 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
 > publicly documented behavior and open-source third-party components. "FileBot" is a trademark of
 > its respective owner; Renami is an independent project.
 
-## Features (current MVP)
+## Features
 
 - 🎬 **Media scanning** — recursive folder scan, video/audio detection
-- 🔍 **Filename parsing** — `S01E02`, `1x02`, `102` patterns, year, quality-token stripping
-- 📡 **Metadata lookup** — TMDb (TV + Movies) via user-supplied API key
+- 🔍 **Filename parsing** — `S01E02`, `1x02`, `102`, anime absolute `Show - 05` patterns,
+  year, quality-token stripping
+- 📡 **Metadata lookup** — TMDb, TheTVDB v4 (incl. aired/dvd/absolute episode orders),
+  OMDb, plus an offline `local` datasource; 24 h HTTP response cache
 - 🧠 **Fuzzy matching** — normalized Levenshtein + token-overlap scoring
-- 📝 **Format engine** — Groovy-backed `{expressions}` (e.g. `{n} - {s00e00} - {t}`)
+- 📝 **Format engine** — Groovy-backed `{expressions}` (e.g. `{n} - {s00e00} - {t}`),
+  `/` in templates creates folder hierarchies
 - 🔁 **Safe renaming** — dry-run by default, conflict policies, JSONL history + `undo`
-- 🛠 **Probe command** — MediaInfo/ffprobe technical metadata dump
+- 🖥 **Desktop UI** — `renami gui` (Swing rename panel); bare `renami` opens it too
+- 📦 **Archives** — list/extract zip/tar/7z via native tools; `post-process` renames
+  contents directly and can `--clean` processed archives
+- ✅ **Checksums** — write/verify SFV, `md5sum`-style, SHA-1/SHA-256, CRC32 sidecars
+- 🧮 **Duplicates** — 3-phase dupe finder (size → partial hash → full SHA-256)
+- 💬 **Subtitles** — OpenSubtitles.com v2 search + download (`--lang`)
+- 🎵 **Music** — audio fingerprinting with fpcalc + AcouSTID/MusicBrainz lookup (`track`)
+- 📜 **Scripting** — Groovy `--script` hooks with `fn`/`info`/`source`/`target` bindings and `--def` vars
+- 🛠 **Probe** — MediaInfo/ffprobe technical metadata dump
 
 ## Quick start
 
@@ -25,21 +36,47 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
 export RENAMI_TMDB_API_KEY="your-tmdb-v4-read-token"   # or ~/.renami/config.properties
 
 gradle installDist
-./build/install/renami/bin/renami rename /path/to/tv --dry-run
-./build/install/renami/bin/renami rename /path/to/tv --apply
-./build/install/renami/bin/renami undo
+BIN=./build/install/renami/bin/renami
+
+$BIN rename /path/to/tv            # dry-run preview
+$BIN rename /path/to/tv --apply
+$BIN post-process ~/Downloads --apply --clean -o ~/Media   # archives + structured output
+$BIN subtitles /path/to/tv --lang en --apply
+$BIN track ~/Music --apply         # needs `brew install chromaprint`
+$BIN dupe /path/to/media
+$BIN checksum /path/to/media --write checksums.sfv
+$BIN undo
+$BIN gui                           # desktop rename panel
+```
+
+No API key? Everything still works offline with `--db local` (rename purely from
+filename facts) — and `--help` on any command documents its options.
+
+Configuration is read from `~/.renami/config.properties` or `RENAMI_*` environment
+variables: `RENAMI_TMDB_API_KEY`, `RENAMI_TVDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
+`RENAMI_OPENSUBTITLES_API_KEY`, `RENAMI_ACOUSTID_API_KEY`.
+
+## Building
+
+```bash
+gradle build          # compile + tests
+gradle installDist    # CLI at build/install/renami/bin/renami
+gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 ```
 
 ## Roadmap
 
-| Phase | Scope |
-|---|---|
-| **0.1 (now)** | CLI core: scan → parse → TMDb lookup → match → format → rename/undo |
-| 0.2 | TheTVDB/OMDb datasources, anime (XEM mappings), subtitle search (OpenSubtitles) |
-| 0.3 | Archive handling (sevenzipjbinding/7z), checksum verification (SFV/MD5/SHA/ED2K) |
-| 0.4 | Swing GUI: rename panel with live match table, presets, dark theme |
-| 0.5 | Groovy scripting layer (script shell + postprocess pipeline), macOS integration (xattr, Finder tags, APFS clones) |
-| 1.0 | jpackage `.app` bundling, auto-update, parity with MVP feature set of commercial tools |
+| Phase | Scope | Status |
+|---|---|---|
+| 0.1 | CLI core: scan → parse → TMDb lookup → match → format → rename/undo | ✅ |
+| 0.2 | TheTVDB/OMDb datasources, `--db` selection, HTTP cache | ✅ |
+| 0.3 | Archives, checksums, dupe finder | ✅ |
+| 0.4 | Swing GUI rename panel | ✅ |
+| 0.5 | Groovy scripting, post-process pipeline | ✅ |
+| 0.6 | Subtitles (OpenSubtitles v2) | ✅ |
+| 0.7 | Music fingerprinting (fpcalc + AcouSTID) | ✅ |
+| 0.8 | Anime absolute episode ordering | ✅ |
+| 1.0 | jpackage `.app`, ED2K hashes, AniDB/XEM mappings, GUI subtitle/dupe tabs | 🔜 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
