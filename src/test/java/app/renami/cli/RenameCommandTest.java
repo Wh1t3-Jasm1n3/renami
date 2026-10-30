@@ -23,7 +23,7 @@ class RenameCommandTest {
     @TempDir
     Path dir;
 
-    private static final class StubDatasource implements Datasource {
+    private static class StubDatasource implements Datasource {
         @Override
         public String name() {
             return "stub";
@@ -123,6 +123,46 @@ class RenameCommandTest {
         rename.conflict = app.renami.rename.ConflictPolicy.FAIL;
         rename.minScore = 0.6;
         assertEquals(2, rename.call());
+    }
+
+    @Test
+    void absoluteEpisodeOrderMapsAnimeFiles() throws Exception {
+        Files.writeString(dir.resolve("[SubsPlease] Steins;Gate - 05 (1080p) [10bit].mkv"), "x");
+
+        RenameCommand rename = new RenameCommand() {
+            @Override
+            Datasource createDatasource(Config config) {
+                return new StubDatasource() {
+                    @Override
+                    public List<ShowInfo> searchShow(String query, int year) {
+                        return List.of(new ShowInfo("79562", "Steins;Gate", "2011-04-07"));
+                    }
+
+                    @Override
+                    public List<EpisodeInfo> getSeason(String showId, int season, String order) {
+                        if ("absolute".equals(order)) {
+                            return List.of(
+                                    new EpisodeInfo(1, 1, "Turning Point", "2011-04-07"),
+                                    new EpisodeInfo(2, 5, "Reticent Obstinacy", "2011-08-10"));
+                        }
+                        return List.of();
+                    }
+                };
+            }
+
+            @Override
+            HistoryStore createHistoryStore() {
+                return new HistoryStore(dir.resolve("history.jsonl"));
+            }
+        };
+        rename.input = dir;
+        rename.mode = "episode";
+        rename.order = "absolute";
+        rename.apply = true;
+
+        assertEquals(0, rename.call());
+        Path expected = dir.resolve("Steins;Gate - S02E05 - Reticent Obstinacy.mkv");
+        assertTrue(Files.isRegularFile(expected));
     }
 
     @Test

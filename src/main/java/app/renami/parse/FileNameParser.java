@@ -84,6 +84,28 @@ public final class FileNameParser {
     }
 
     /**
+     * Anime-style absolute episode number: a trailing 1-3 digit number attached with a
+     * dash, the fansub convention, e.g. "[GRP] Steins;Gate - 05". Dot/space attachments
+     * are excluded so movie sequels ("The.Godfather.2") are not mistaken for episodes.
+     */
+    public static Optional<Integer> parseAbsoluteEpisode(String text, int year) {
+        String cleaned = stripQualityTokens(text);
+        cleaned = cleaned.replaceAll("[\\[\\(][^\\]\\)]*[\\]\\)]", " ");
+        if (year > 0) {
+            cleaned = cleaned.replaceAll("\\b" + year + "\\b", " ");
+        }
+        cleaned = cleaned.trim();
+        Matcher m = Pattern.compile("[-–—]\\s*(\\d{1,3})$").matcher(cleaned);
+        if (m.find()) {
+            int n = Integer.parseInt(m.group(1));
+            if (n > 0 && n != year) {
+                return Optional.of(n);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Best guess for the series/movie title: text before the episode marker (episodes)
      * or the whole name minus year/quality noise (movies).
      */
@@ -114,10 +136,20 @@ public final class FileNameParser {
         String normalized = normalizeDelimiters(fileName, extension);
         int year = parseYear(normalized).orElse(0);
         // quality tokens (x264, 1080p, …) must not be mistaken for loose episode numbers
-        EpisodeNumber episode = parseEpisode(normalized)
-                .or(() -> parseLooseEpisode(stripQualityTokens(normalized), year))
-                .orElse(null);
+        EpisodeNumber episode = parseEpisode(normalized).orElse(null);
+        Integer absolute = null;
+        if (episode == null) {
+            // dash-attached absolute numbers ("Show - 104") win over the loose SxxEyy heuristic,
+            // which only makes sense for space-attached names ("The Office 102")
+            absolute = parseAbsoluteEpisode(normalized, year).orElse(null);
+            if (absolute == null) {
+                episode = parseLooseEpisode(stripQualityTokens(normalized), year).orElse(null);
+            }
+        }
         String title = guessTitle(normalized, year);
-        return new ReleaseInfo(fileName, title, episode, year);
+        if (absolute != null) {
+            title = title.replaceAll("[-–—]\\s*\\d{1,3}$", "").trim();
+        }
+        return new ReleaseInfo(fileName, title, episode, year, absolute);
     }
 }

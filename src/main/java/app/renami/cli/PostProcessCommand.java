@@ -60,7 +60,7 @@ public class PostProcessCommand implements Callable<Integer> {
     @Option(names = "--min-score", defaultValue = "0.60", description = "minimum match score 0..1 (default: ${DEFAULT-VALUE})")
     double minScore = 0.60;
 
-    @Option(names = "--order", defaultValue = "default", description = "episode order: default | aired | dvd (default: ${DEFAULT-VALUE})")
+    @Option(names = "--order", defaultValue = "default", description = "episode order: default | aired | dvd | absolute (anime) (default: ${DEFAULT-VALUE})")
     String order = "default";
 
     @Option(names = "--clean", description = "delete archives after their contents were processed")
@@ -108,7 +108,8 @@ public class PostProcessCommand implements Callable<Integer> {
         RenameService service = new RenameService(datasource, System.err);
         List<RenameService.Item> items = service.parseAll(candidates);
         boolean episodeMode = mode.equalsIgnoreCase("episode")
-                || (mode.equalsIgnoreCase("auto") && items.stream().anyMatch(i -> i.info().hasEpisode()));
+                || (mode.equalsIgnoreCase("auto") && items.stream()
+                .anyMatch(i -> i.info().hasEpisode() || i.info().hasAbsoluteEpisode()));
         String template = episodeMode ? tvFormat : movieFormat;
         RenameService.Options options = new RenameService.Options(mode, template, minScore, order);
         RenameService.TargetResolver resolver = output != null

@@ -40,4 +40,28 @@ class FileNameParserTest {
         assertEquals(false, info.hasEpisode());
         assertEquals(1982, info.year());
     }
+
+    @Test
+    void parsesAnimeAbsoluteEpisode() {
+        ReleaseInfo info = FileNameParser.parse("[SubsPlease] Steins;Gate - 05 (1080p) [10bit].mkv", "mkv");
+        assertEquals("Steins;Gate", info.titleGuess());
+        assertEquals(5, info.absoluteEpisode());
+        assertEquals(false, info.hasEpisode());
+    }
+
+    @Test
+    void dashedThreeDigitPrefersAbsoluteOverLooseSeasonGuess() {
+        ReleaseInfo info = FileNameParser.parse("Attack on Titan - 104.mkv", "mkv");
+        assertEquals(null, info.episode());
+        assertEquals(104, info.absoluteEpisode());
+        assertEquals("Attack on Titan", info.titleGuess());
+    }
+
+    @Test
+    void movieSequelIsNotAnEpisode() {
+        ReleaseInfo info = FileNameParser.parse("The.Godfather.2.1974.BluRay.mkv", "mkv");
+        assertEquals(false, info.hasEpisode());
+        assertEquals(null, info.absoluteEpisode());
+        assertEquals("The Godfather 2", info.titleGuess());
+    }
 }

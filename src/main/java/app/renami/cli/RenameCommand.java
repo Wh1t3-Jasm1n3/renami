@@ -48,7 +48,7 @@ public class RenameCommand implements Callable<Integer> {
     @Option(names = "--min-score", defaultValue = "0.60", description = "minimum match score 0..1 (default: ${DEFAULT-VALUE})")
     double minScore = 0.60;
 
-    @Option(names = "--order", defaultValue = "default", description = "episode order: default | aired | dvd (default: ${DEFAULT-VALUE})")
+    @Option(names = "--order", defaultValue = "default", description = "episode order: default | aired | dvd | absolute (anime) (default: ${DEFAULT-VALUE})")
     String order = "default";
 
     @Option(names = "--no-cache", description = "bypass the on-disk HTTP response cache")

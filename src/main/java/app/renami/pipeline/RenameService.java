@@ -90,7 +90,8 @@ public final class RenameService {
             return planLocal(items, options, resolver);
         }
         boolean episodeMode = mode.equalsIgnoreCase("episode")
-                || (mode.equalsIgnoreCase("auto") && items.stream().anyMatch(i -> i.info().hasEpisode()));
+                || (mode.equalsIgnoreCase("auto") && items.stream()
+                .anyMatch(i -> i.info().hasEpisode() || i.info().hasAbsoluteEpisode()));
         return episodeMode ? planEpisodes(items, options, resolver) : planMovies(items, options, resolver);
     }
 
@@ -100,9 +101,10 @@ public final class RenameService {
     }
 
     public List<RenameOperation> planEpisodes(List<Item> items, Options options, TargetResolver resolver) throws Exception {
+        boolean absoluteMode = "absolute".equalsIgnoreCase(options.order());
         Map<String, List<Item>> byShow = new LinkedHashMap<>();
         for (Item item : items) {
-            if (item.info().hasEpisode()) {
+            if (item.info().hasEpisode() || (absoluteMode && item.info().hasAbsoluteEpisode())) {
                 byShow.computeIfAbsent(NameScorer.canonical(item.info().titleGuess()), k -> new ArrayList<>()).add(item);
             }
         }
@@ -119,13 +121,35 @@ public final class RenameService {
                     + (show.year() > 0 ? " (" + show.year() + ")" : ""));
 
             String template = options.format() != null ? options.format() : "{n} - {s00e00} - {t}";
+            List<EpisodeInfo> absoluteList = null;
             for (Item item : group) {
                 EpisodeNumber ep = item.info().episode();
                 String episodeTitle = "";
-                for (EpisodeInfo info : datasource.getSeason(show.id(), ep.season(), options.order())) {
-                    if (info.season() == ep.season() && info.episode() == ep.episode()) {
-                        episodeTitle = info.name() == null ? "" : info.name();
-                        break;
+                if (ep == null) {
+                    // absolute numbering (anime): map absolute number → season/episode via the API
+                    if (absoluteList == null) {
+                        absoluteList = datasource.getSeason(show.id(), 1, "absolute");
+                    }
+                    EpisodeInfo mapped = null;
+                    for (EpisodeInfo info : absoluteList) {
+                        if (info.episode() == item.info().absoluteEpisode()) {
+                            mapped = info;
+                            break;
+                        }
+                    }
+                    if (mapped == null) {
+                        log.println("skip (" + item.file().getFileName() + ": absolute episode "
+                                + item.info().absoluteEpisode() + " not found for \"" + show.name() + "\")");
+                        continue;
+                    }
+                    ep = new EpisodeNumber(mapped.season(), mapped.episode());
+                    episodeTitle = mapped.name() == null ? "" : mapped.name();
+                } else {
+                    for (EpisodeInfo info : datasource.getSeason(show.id(), ep.season(), options.order())) {
+                        if (info.season() == ep.season() && info.episode() == ep.episode()) {
+                            episodeTitle = info.name() == null ? "" : info.name();
+                            break;
+                        }
                     }
                 }
                 Map<String, Object> vars = FormatEngine.standardVars(
