@@ -22,6 +22,8 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
 - 🔁 **Safe renaming** — dry-run by default, conflict policies, JSONL history + `undo`;
   `--action rename|move|copy|hardlink|symlink` transfer modes (undo deletes created
   copies/links instead of moving files back)
+- 🧲 **Companion files** — sidecars sharing the media base name (`Movie.en.srt`, `Movie.nfo`,
+  `Movie.jpg`) follow the media file through rename/move/copy/link; `--no-companion` opts out
 - 🖥 **Desktop UI** — `renami gui` (Swing rename panel); bare `renami` opens it too
 - 📦 **Archives** — list/extract zip/tar/7z via native tools; `post-process` renames
   contents directly and can `--clean` processed archives

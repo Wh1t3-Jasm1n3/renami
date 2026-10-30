@@ -1,5 +1,6 @@
 package app.renami.gui;
 
+import app.renami.media.CompanionFiles;
 import app.renami.pipeline.RenameService;
 import app.renami.rename.ConflictPolicy;
 import app.renami.rename.RenameExecutor;
@@ -36,8 +37,15 @@ public final class RenameController {
     }
 
     public List<Row> preview(List<Path> files, RenameService.Options options) throws Exception {
+        return preview(files, options, true);
+    }
+
+    public List<Row> preview(List<Path> files, RenameService.Options options, boolean companions) throws Exception {
         RenameService service = new RenameService(datasource, System.err);
         List<RenameOperation> plan = service.plan(files, options);
+        if (companions) {
+            plan = CompanionFiles.expand(plan);
+        }
         Set<Path> planned = new HashSet<>();
         List<Row> rows = new ArrayList<>();
         for (RenameOperation op : plan) {

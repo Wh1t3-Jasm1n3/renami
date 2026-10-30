@@ -1,5 +1,6 @@
 package app.renami.cli;
 
+import app.renami.media.CompanionFiles;
 import app.renami.media.MediaScanner;
 import app.renami.parse.FileNameParser;
 import app.renami.pipeline.RenameService;
@@ -59,6 +60,11 @@ public class RenameCommand implements Callable<Integer> {
     @Option(names = "--no-cache", description = "bypass the on-disk HTTP response cache")
     boolean noCache;
 
+    @Option(names = {"--companion", "--no-companion"}, defaultValue = "true",
+            description = "rename sidecars that share the media base name (subs, nfo, artwork) along with it; "
+                    + "--no-companion disables (default: ${DEFAULT-VALUE})")
+    boolean companion = true;
+
     @Option(names = "--script", description = "Groovy script to run for each processed file (vars: fn, info, source, renami)")
     Path script;
 
@@ -98,6 +104,9 @@ public class RenameCommand implements Callable<Integer> {
         if (plan.isEmpty()) {
             System.out.println("nothing to do");
             return 0;
+        }
+        if (companion) {
+            plan = CompanionFiles.expand(plan);
         }
 
         RenameExecutor executor = new RenameExecutor(conflict, transferAction);

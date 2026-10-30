@@ -91,6 +91,59 @@ class PostProcessCommandTest {
     }
 
     @Test
+    void companionSidecarsFollowIntoTheOutputTree() throws Exception {
+        Files.writeString(dir.resolve("breaking.bad.s01e02.1080p.mkv"), "video");
+        Files.writeString(dir.resolve("breaking.bad.s01e02.1080p.en.srt"), "subs");
+        PostProcessCommand command = new PostProcessCommand() {
+            @Override
+            Datasource createDatasource(Config config) {
+                return new StubDatasource();
+            }
+
+            @Override
+            HistoryStore createHistoryStore() {
+                return new HistoryStore(dir.resolve("history.jsonl"));
+            }
+        };
+        command.input = dir;
+        command.output = dir.resolve("tv");
+        command.apply = true;
+        command.conflict = ConflictPolicy.INDEX;
+
+        assertEquals(0, command.call());
+
+        Path sub = dir.resolve("tv/Breaking Bad/Season 1/Breaking Bad - S01E02 - Cat in the Hat.en.srt");
+        assertTrue(Files.isRegularFile(sub), "subtitle renamed to match the episode, language kept");
+        assertEquals("subs", Files.readString(sub));
+        assertTrue(Files.notExists(dir.resolve("breaking.bad.s01e02.1080p.en.srt")), "sidecar moved, not copied");
+    }
+
+    @Test
+    void companionFalseLeavesSidecarsBehind() throws Exception {
+        Files.writeString(dir.resolve("breaking.bad.s01e02.1080p.mkv"), "video");
+        Files.writeString(dir.resolve("breaking.bad.s01e02.1080p.en.srt"), "subs");
+        PostProcessCommand command = new PostProcessCommand() {
+            @Override
+            Datasource createDatasource(Config config) {
+                return new StubDatasource();
+            }
+
+            @Override
+            HistoryStore createHistoryStore() {
+                return new HistoryStore(dir.resolve("history.jsonl"));
+            }
+        };
+        command.input = dir;
+        command.output = dir.resolve("tv");
+        command.apply = true;
+        command.companion = false;
+        command.conflict = ConflictPolicy.INDEX;
+
+        assertEquals(0, command.call());
+        assertTrue(Files.exists(dir.resolve("breaking.bad.s01e02.1080p.en.srt")), "--no-companion leaves the sidecar");
+    }
+
+    @Test
     void dryRunLeavesEverythingInPlace() throws Exception {
         Files.writeString(dir.resolve("breaking.bad.s01e02.mkv"), "x");
         PostProcessCommand command = new PostProcessCommand() {

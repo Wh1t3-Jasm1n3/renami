@@ -11,6 +11,7 @@ app.renami
 ├── pipeline             RenameService: the UI-independent scan→match→format→plan pipeline
 ├── media                file scanning + technical probing
 │   ├── MediaScanner     recursive walk, extension-based media detection
+│   ├── CompanionFiles   same-base sidecars (subs/nfo/artwork) follow the media file
 │   ├── MediaProbe       interface
 │   ├── MediaInfoCliProbe   shells out to `mediainfo --Output=JSON`
 │   ├── FFProbeCliProbe     fallback via `ffprobe -of json`

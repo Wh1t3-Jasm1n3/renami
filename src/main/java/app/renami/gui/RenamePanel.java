@@ -34,6 +34,7 @@ public final class RenamePanel extends JPanel {
                 }
             };
     private final JTable table = new JTable(tableModel);
+    private final JCheckBox companionCheck = new JCheckBox("Companions", true);
     private final JButton matchButton = new JButton("Match");
     private final JButton renameButton = new JButton("Rename");
     private final JLabel statusLabel = new JLabel(" ");
@@ -61,6 +62,7 @@ public final class RenamePanel extends JPanel {
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
         bottom.add(matchButton);
         bottom.add(renameButton);
+        bottom.add(companionCheck);
         bottom.add(statusLabel);
         add(bottom, BorderLayout.SOUTH);
 
@@ -129,7 +131,7 @@ public final class RenamePanel extends JPanel {
                 return controller.preview(files, new RenameService.Options(
                         (String) modeBox.getSelectedItem(),
                         formatField.getText().isBlank() ? null : formatField.getText(),
-                        0.60));
+                        0.60), companionCheck.isSelected());
             }
 
             @Override

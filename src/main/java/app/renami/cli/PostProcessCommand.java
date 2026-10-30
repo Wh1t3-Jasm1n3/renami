@@ -1,6 +1,7 @@
 package app.renami.cli;
 
 import app.renami.archive.ArchiveTool;
+import app.renami.media.CompanionFiles;
 import app.renami.media.MediaScanner;
 import app.renami.parse.FileNameParser;
 import app.renami.pipeline.RenameService;
@@ -71,6 +72,11 @@ public class PostProcessCommand implements Callable<Integer> {
     @Option(names = "--clean", description = "delete archives after their contents were processed")
     boolean clean;
 
+    @Option(names = {"--companion", "--no-companion"}, defaultValue = "true",
+            description = "move sidecars that share the media base name (subs, nfo, artwork) along with it; "
+                    + "--no-companion disables (default: ${DEFAULT-VALUE})")
+    boolean companion = true;
+
     @Option(names = "--script", description = "Groovy script run for each processed file (vars: fn, info, source, target, renami)")
     Path script;
 
@@ -128,6 +134,9 @@ public class PostProcessCommand implements Callable<Integer> {
                 ? RenameService.structuredResolver(template, output.toAbsolutePath())
                 : null;
         List<RenameOperation> plan = service.plan(candidates, options, resolver);
+        if (companion) {
+            plan = CompanionFiles.expand(plan);
+        }
 
         if (plan.isEmpty()) {
             cleanup(extractedDirs);
