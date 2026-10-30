@@ -39,6 +39,7 @@ app.renami
 ├── archive              ArchiveTool: list/extract via 7z/tar/unzip
 ├── audio                Fingerprinter: fpcalc wrapper for AcouSTID lookups
 ├── script               ScriptRuntime: Groovy --script hooks + --def coercion
+├── watch                FolderWatcher: WatchService + size-settle debounce for new files
 ├── gui                  Swing panels (Rename / Subtitles / Duplicates), FileDrop, AppIcon
 └── util                 Config (env + ~/.renami/config.properties), NativeTools, Version, Json helpers
 ```
@@ -83,3 +84,6 @@ scan → parse (ReleaseInfo) → group (movie | per-show episodes)
   copy when the source has since disappeared. Hardlinks degrade to a copy across filesystems
   instead of failing the batch; a case-only target on a case-insensitive filesystem is refused
   for non-consuming modes because it would overwrite the source with itself.
+- **Settle-by-size, not lock files** — `watch` hands a new file over once its size has been
+  unchanged for `--settle` seconds. That detects finished downloads without depending on any
+  downloader's temp-file naming, and a file renamed away before settling is simply dropped.

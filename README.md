@@ -24,6 +24,8 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
   copies/links instead of moving files back)
 - 🧲 **Companion files** — sidecars sharing the media base name (`Movie.en.srt`, `Movie.nfo`,
   `Movie.jpg`) follow the media file through rename/move/copy/link; `--no-companion` opts out
+- 👀 **Folder watch** — `renami watch ~/Downloads --apply` processes files as soon as their
+  size stops changing (finished downloads), through the same pipeline as `rename`
 - 🖥 **Desktop UI** — `renami gui` (Swing rename panel); bare `renami` opens it too
 - 📦 **Archives** — list/extract zip/tar/7z via native tools; `post-process` renames
   contents directly and can `--clean` processed archives
@@ -48,6 +50,7 @@ $BIN rename /path/to/tv --apply
 $BIN rename ~/AniMe --db kitsu --order absolute   # anime: key-free, romaji or english titles
 $BIN post-process ~/Downloads --apply --clean -o ~/Media   # archives + structured output
 $BIN post-process ~/Downloads --apply --action hardlink -o ~/Media  # build a library without duplicating data
+$BIN watch ~/Downloads --apply        # auto-process finished downloads as they land
 $BIN subtitles /path/to/tv --lang en --apply
 $BIN track ~/Music --apply         # needs `brew install chromaprint`
 $BIN dupe /path/to/media
@@ -87,7 +90,8 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 0.9 | ED2K hashes, `filter` command, `list --format`, GUI Subtitles/Duplicates tabs, drag & drop | ✅ |
 | 1.0 | jpackage `.app` + generated icon, anime datasource (Kitsu) and TheXEM mappings, subtitle hash matching | ✅ |
 | 1.1 | `--action rename/move/copy/hardlink/symlink` transfer modes with verb-aware undo | ✅ |
-| 1.2 | companion-file import, folder watch | 🔜 |
+| 1.2 | companion-file import, folder watch (`renami watch`) | ✅ |
+| 1.3 | GUI history view, dark theme, subtitle search parity | 🔜 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
