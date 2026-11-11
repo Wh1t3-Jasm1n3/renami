@@ -65,7 +65,7 @@ public class FilterCommand implements Callable<Integer> {
     }
 
     /** Script bindings: fn, name, ext, size, plus parsed facts title/year/season/episode/absolute. */
-    static Map<String, Object> bindingFor(Path file) throws Exception {
+    public static Map<String, Object> bindingFor(Path file) throws Exception {
         ReleaseInfo info = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file));
         Map<String, Object> vars = new HashMap<>();
         vars.put("fn", file.toFile());

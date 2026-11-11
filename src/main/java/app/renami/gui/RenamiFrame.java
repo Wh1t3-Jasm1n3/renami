@@ -11,12 +11,25 @@ import java.util.List;
 public final class RenamiFrame extends JFrame {
 
     private final RenamePanel renamePanel = new RenamePanel();
+    private final EpisodesPanel episodesPanel = new EpisodesPanel(renamePanel, () -> showView("rename"));
     private final PostProcessPanel postProcessPanel = new PostProcessPanel();
     private final WatchPanel watchPanel = new WatchPanel();
     private final SubtitlesPanel subtitlesPanel = new SubtitlesPanel();
+    private final FilterPanel filterPanel = new FilterPanel(renamePanel, () -> showView("rename"));
     private final DupePanel dupePanel = new DupePanel();
     private final ChecksumPanel checksumPanel = new ChecksumPanel();
     private final HistoryPanel historyPanel = new HistoryPanel();
+    private final java.util.Map<String, JButton> primaryButtons = new java.util.HashMap<>();
+    private JPanel content;
+
+    /** Switches the visible card and re-arms the Return-key default button. */
+    void showView(String id) {
+        ((CardLayout) content.getLayout()).show(content, id);
+        JButton primary = primaryButtons.get(id);
+        if (primary != null) {
+            getRootPane().setDefaultButton(primary);
+        }
+    }
 
     public RenamiFrame() {
         this(List.of());
@@ -29,40 +42,49 @@ public final class RenamiFrame extends JFrame {
         AppIcon.applyTo(this);
 
         JPanel content = new JPanel(new CardLayout());
+        this.content = content;
         content.add(renamePanel, "rename");
+        content.add(episodesPanel, "episodes");
         content.add(postProcessPanel, "postprocess");
         content.add(watchPanel, "watch");
         content.add(subtitlesPanel, "subtitles");
+        content.add(filterPanel, "filter");
         content.add(dupePanel, "duplicates");
         content.add(checksumPanel, "checksum");
         content.add(historyPanel, "history");
 
         // each view's primary action becomes the Return-key default button
-        java.util.Map<String, JButton> primary = java.util.Map.of(
+        primaryButtons.putAll(java.util.Map.of(
                 "rename", renamePanel.renameButton(),
+                "episodes", episodesPanel.searchButton(),
                 "postprocess", postProcessPanel.runButton(),
                 "watch", watchPanel.startButton(),
                 "subtitles", subtitlesPanel.downloadButton(),
+                "filter", filterPanel.scanButton(),
                 "duplicates", dupePanel.findButton(),
                 "checksum", checksumPanel.generateButton(),
-                "history", historyPanel.undoButton());
+                "history", historyPanel.undoButton()));
 
         Sidebar sidebar = new Sidebar(
                 List.of(new Sidebar.Item("rename", "Rename", "rename"),
+                        new Sidebar.Item("episodes", "Episodes", "episodes"),
                         new Sidebar.Item("postprocess", "Post-Process", "postprocess"),
                         new Sidebar.Item("watch", "Watch", "watch"),
                         new Sidebar.Item("subtitles", "Subtitles", "subtitles"),
+                        new Sidebar.Item("filter", "Filter", "filter"),
                         new Sidebar.Item("duplicates", "Duplicates", "duplicates"),
                         new Sidebar.Item("checksum", "Checksum", "checksum"),
                         new Sidebar.Item("history", "History", "history")),
-                id -> {
-                    ((CardLayout) content.getLayout()).show(content, id);
-                    getRootPane().setDefaultButton(primary.get(id));
-                });
+                this::showView);
 
         add(sidebar, BorderLayout.WEST);
         add(content, BorderLayout.CENTER);
         getRootPane().setDefaultButton(renamePanel.renameButton());
+
+        String startView = System.getProperty("renami.view");
+        if (startView != null && primaryButtons.containsKey(startView)) {
+            showView(startView);
+        }
 
         setSize(1120, 700);
         setLocationByPlatform(true);

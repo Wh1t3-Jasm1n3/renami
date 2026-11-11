@@ -765,6 +765,11 @@ public final class RenamePanel extends JPanel {
         }
     }
 
+    /** Entry point for sibling views (Episodes, Filter) to feed target names in. */
+    void loadNamesFromText(String text) {
+        setNamesFromText(text);
+    }
+
     /** Map text lines onto selected (or all) rows, in order — FileBot's Load Names. */
     private void setNamesFromText(String text) {
         List<String> lines = new java.util.ArrayList<>();
