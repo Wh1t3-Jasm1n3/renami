@@ -44,6 +44,7 @@ public final class RenamiFrame extends JFrame {
             System.err.println("error: no display available — use the `rename` command instead");
             return 3;
         }
+        GuiTheme.apply();
         java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
         SwingUtilities.invokeLater(() -> {
             RenamiFrame frame = new RenamiFrame(preload);
