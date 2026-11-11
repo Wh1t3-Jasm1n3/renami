@@ -1,14 +1,10 @@
 package app.renami.cli;
 
-import app.renami.media.CompanionFiles;
-import app.renami.pipeline.RenameService;
+import app.renami.gui.WatchController;
 import app.renami.rename.ConflictPolicy;
 import app.renami.rename.HistoryStore;
-import app.renami.rename.RenameExecutor;
-import app.renami.rename.RenameOperation;
 import app.renami.rename.TransferAction;
 import app.renami.util.Config;
-import app.renami.watch.FolderWatcher;
 import app.renami.web.Datasource;
 import app.renami.web.Datasources;
 import picocli.CommandLine.Command;
@@ -16,14 +12,12 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.nio.file.Path;
-import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
  * Folder watch (the classic {@code -watch}): new media files are processed as soon as
  * their size stops changing, through the same match → format → transfer pipeline as
- * {@code rename}.
+ * {@code rename}. Runs on the shared {@link WatchController} that the GUI uses too.
  */
 @Command(name = "watch", description = "Watch a folder and process new media files as they land.", mixinStandardHelpOptions = true)
 public class WatchCommand implements Callable<Integer> {
@@ -65,7 +59,7 @@ public class WatchCommand implements Callable<Integer> {
             description = "seconds a file's size must stay unchanged before it is processed (default: ${DEFAULT-VALUE})")
     int settleSeconds = 2;
 
-    private volatile FolderWatcher watcher;
+    private volatile WatchController controller;
 
     @Override
     public Integer call() throws Exception {
@@ -77,67 +71,28 @@ public class WatchCommand implements Callable<Integer> {
             System.err.println("error: " + e.getMessage());
             return 2;
         }
-        TransferAction transferAction;
         try {
-            transferAction = TransferAction.parse(action);
+            TransferAction.parse(action);
         } catch (IllegalArgumentException e) {
             System.err.println("error: " + e.getMessage());
             return 2;
         }
 
-        RenameService service = new RenameService(datasource, System.err);
-        HistoryStore history = createHistoryStore();
+        WatchController.Options options = new WatchController.Options(
+                mode, format, action, conflict, minScore, order, companion, apply);
+        WatchController c = new WatchController(createHistoryStore());
+        this.controller = c;
         System.out.println("watching " + input.toAbsolutePath() + " — press Ctrl+C to stop");
-        try (FolderWatcher w = new FolderWatcher(input, Duration.ofSeconds(settleSeconds))) {
-            this.watcher = w;
-            Runtime.getRuntime().addShutdownHook(new Thread(w::stop));
-            w.awaitBatches(batch -> {
-                try {
-                    processBatch(service, history, batch, transferAction);
-                } catch (Exception e) {
-                    System.err.println("error: " + e.getMessage());
-                }
-            });
-        }
+        Runtime.getRuntime().addShutdownHook(new Thread(c::stop));
+        c.run(input, settleSeconds, options, datasource, System.out::println);
         return 0;
-    }
-
-    void processBatch(RenameService service, HistoryStore history, List<Path> files,
-                      TransferAction transferAction) throws Exception {
-        System.out.println();
-        System.out.println("settled: " + files.stream().map(p -> p.getFileName().toString()).toList());
-        List<RenameOperation> plan = service.plan(files, new RenameService.Options(mode, format, minScore, order));
-        if (plan.isEmpty()) {
-            System.out.println("nothing to do");
-            return;
-        }
-        if (companion) {
-            plan = CompanionFiles.expand(plan);
-        }
-        if (!apply) {
-            for (RenameOperation op : plan) {
-                System.out.println("[dry-run] " + op.source().getFileName() + "  →  " + op.target().getFileName());
-            }
-            return;
-        }
-        List<RenameExecutor.Result> results = new RenameExecutor(conflict, transferAction).apply(plan);
-        List<RenameOperation> applied = results.stream()
-                .filter(RenameExecutor.Result::applied)
-                .map(RenameExecutor.Result::operation)
-                .toList();
-        history.record(applied, transferAction);
-        for (RenameExecutor.Result r : results) {
-            System.out.println("[" + r.status() + "] " + r.operation().source().getFileName()
-                    + "  →  " + r.actualTarget().getFileName());
-        }
-        System.out.println(applied.size() + " operations applied. Use `renami undo` to revert.");
     }
 
     /** Stops the watch loop (used by tests; Ctrl+C is handled by the shutdown hook). */
     void stop() {
-        FolderWatcher w = watcher;
-        if (w != null) {
-            w.stop();
+        WatchController c = controller;
+        if (c != null) {
+            c.stop();
         }
     }
 
