@@ -64,7 +64,7 @@ public final class RenamiFrame extends JFrame {
         add(content, BorderLayout.CENTER);
         getRootPane().setDefaultButton(renamePanel.renameButton());
 
-        setSize(1000, 640);
+        setSize(1120, 700);
         setLocationByPlatform(true);
     }
 

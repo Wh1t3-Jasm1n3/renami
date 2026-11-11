@@ -60,6 +60,16 @@ public final class SegmentedControl extends JPanel {
         return segments.get(0).getText();
     }
 
+    public void setSelected(String item) {
+        for (JToggleButton segment : segments) {
+            if (segment.getText().equals(item)) {
+                segment.setSelected(true);
+                repaint();
+                return;
+            }
+        }
+    }
+
     public void onChange(Consumer<String> handler) {
         this.onChange = handler;
     }

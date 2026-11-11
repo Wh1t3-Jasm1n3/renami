@@ -1,14 +1,17 @@
 package app.renami.gui;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.DefaultListModel;
+import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -21,8 +24,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * macOS source-list sidebar: app header on top, one rounded accent selection
- * per view. Replaces the old tab strip.
+ * FileBot's mode rail, in our design language: one icon-over-label cell per
+ * view, big tap targets, and a subtle selection plate that keeps text and
+ * icon fully legible in light and dark mode.
  */
 final class Sidebar extends JPanel {
 
@@ -33,11 +37,11 @@ final class Sidebar extends JPanel {
         super(new BorderLayout());
         setOpaque(true);
         setBackground(Ui.surface());
-        setPreferredSize(new Dimension(200, 0));
+        setPreferredSize(new Dimension(150, 0));
 
         JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
-        header.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
+        header.setBorder(BorderFactory.createEmptyBorder(14, 12, 10, 12));
         JPanel title = new JPanel(new BorderLayout(8, 0));
         title.setOpaque(false);
         JLabel name = new JLabel("Renami");
@@ -56,7 +60,8 @@ final class Sidebar extends JPanel {
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.setOpaque(false);
         list.setFocusable(false);
-        list.setCellRenderer(new SourceCell());
+        list.setCellRenderer(new RailCell());
+        list.setLayoutOrientation(JList.VERTICAL);
         list.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
         list.addListSelectionListener(e -> {
             Item selected = list.getSelectedValue();
@@ -73,34 +78,46 @@ final class Sidebar extends JPanel {
         list.setSelectedIndex(0);
     }
 
-    /** Rounded accent pill behind the selected view. */
-    private static final class SourceCell extends DefaultListCellRenderer {
+    /** Icon-over-label cell with a rounded selection plate (FileBot's rail). */
+    private static final class RailCell implements ListCellRenderer<Item> {
         @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+        public Component getListCellRendererComponent(JList<? extends Item> list, Item item, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
-            Item item = (Item) value;
-            Cell label = new Cell();
-            label.setText(item.label());
-            label.setIcon(Ui.icon(item.icon(), 15));
-            label.setFont(Ui.body().deriveFont(Font.PLAIN, 13f));
-            label.setForeground(isSelected ? Color.WHITE : Ui.text());
-            label.selected = isSelected;
-            label.setOpaque(false);
-            label.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-            return label;
+            Cell cell = new Cell();
+            JLabel icon = new JLabel(Ui.icon(item.icon(), 22));
+            icon.setAlignmentX(CENTER_ALIGNMENT);
+            JLabel label = new JLabel(item.label());
+            label.setAlignmentX(CENTER_ALIGNMENT);
+            label.setFont(Ui.body().deriveFont(Font.PLAIN, 12f));
+            label.setForeground(Ui.text());
+            cell.add(Box.createVerticalStrut(8));
+            cell.add(icon);
+            cell.add(Box.createVerticalStrut(4));
+            cell.add(label);
+            cell.add(Box.createVerticalStrut(8));
+            cell.selected = isSelected;
+            return cell;
         }
     }
 
-    private static final class Cell extends javax.swing.JLabel {
+    private static final class Cell extends JPanel {
         boolean selected;
+
+        Cell() {
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            setOpaque(false);
+        }
 
         @Override
         protected void paintComponent(Graphics g) {
             if (selected) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // subtle plate, not a saturated fill: text and icon stay legible
+                g2.setColor(Ui.dark() ? new Color(255, 255, 255, 26) : new Color(0, 0, 0, 22));
+                g2.fillRoundRect(2, 2, getWidth() - 5, getHeight() - 5, 10, 10);
                 g2.setColor(Ui.accent());
-                g2.fillRoundRect(0, 1, getWidth() - 1, getHeight() - 3, 8, 8);
+                g2.fillRoundRect(4, 10, 3, getHeight() - 21, 3, 3);
                 g2.dispose();
             }
             super.paintComponent(g);

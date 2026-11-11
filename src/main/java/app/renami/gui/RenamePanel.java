@@ -82,7 +82,12 @@ public final class RenamePanel extends JPanel {
         super(new BorderLayout(0, 14));
         setBorder(BorderFactory.createEmptyBorder(18, 22, 14, 22));
 
-        add(Ui.header("Rename"), BorderLayout.NORTH);
+        JPanel titleBar = new JPanel(new BorderLayout());
+        titleBar.setOpaque(false);
+        JLabel title = Ui.header("Rename");
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        titleBar.add(title, BorderLayout.CENTER);
+        add(titleBar, BorderLayout.NORTH);
 
         JPanel panels = new JPanel(new GridBagLayout());
         panels.setOpaque(false);
@@ -101,6 +106,24 @@ public final class RenamePanel extends JPanel {
         matchButton.addActionListener(e -> match());
         renameButton.addActionListener(e -> rename());
         renameButton.setEnabled(false);
+        // FileBot: right-click Match → Fetch popup, right-click Rename → Settings popup
+        matchButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    buildFetchPopup().show(matchButton, e.getX(), e.getY());
+                }
+            }
+        });
+        renameButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    buildSettingsPopup().show(renameButton, e.getX(), e.getY());
+                }
+            }
+        });
+        installPresetKeys();
 
         installListBehavior();
         updateEmptyState();
@@ -136,7 +159,7 @@ public final class RenamePanel extends JPanel {
         originalCard.add(originalScroller, "list");
         originalCard.add(buildDropZone(), "empty");
 
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         toolbar.setOpaque(false);
         toolbar.add(iconButton("up", "Align Up", e -> moveSelected(-1)));
         toolbar.add(iconButton("down", "Align Down", e -> moveSelected(1)));
@@ -154,7 +177,7 @@ public final class RenamePanel extends JPanel {
         namesCard.add(namesScroller, "list");
         namesCard.add(buildNamesPlaceholder(), "empty");
 
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         toolbar.setOpaque(false);
         toolbar.add(iconButton("up", "Align Up", e -> moveSelected(-1)));
         toolbar.add(iconButton("down", "Align Down", e -> moveSelected(1)));
@@ -206,15 +229,7 @@ public final class RenamePanel extends JPanel {
     private JComponent buildBottomBar() {
         JPanel bar = new JPanel(new BorderLayout(12, 0));
         bar.setOpaque(false);
-
-        JPanel selectors = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        selectors.setOpaque(false);
-        selectors.add(captioned("Action", actionControl));
-        selectors.add(captioned("Conflict", conflictControl));
-        bar.add(selectors, BorderLayout.WEST);
-
         statusLabel.setForeground(Ui.secondary());
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         bar.add(statusLabel, BorderLayout.CENTER);
         return bar;
     }
@@ -796,14 +811,64 @@ public final class RenamePanel extends JPanel {
         panel.add(Ui.caption("Min. score"), c);
         c.gridx = 1; c.gridy = 2;
         panel.add(minScoreSpinner, c);
-        c.gridx = 0; c.gridy = 3; c.gridwidth = 2;
+        c.gridx = 0; c.gridy = 3;
+        panel.add(Ui.caption("Action"), c);
+        c.gridx = 1; c.gridy = 3;
+        panel.add(actionControl, c);
+        c.gridx = 0; c.gridy = 4;
+        panel.add(Ui.caption("Conflict"), c);
+        c.gridx = 1; c.gridy = 4;
+        panel.add(conflictControl, c);
+        c.gridx = 0; c.gridy = 5; c.gridwidth = 2;
         panel.add(companionCheck, c);
-        c.gridy = 4; c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridy = 6; c.fill = GridBagConstraints.HORIZONTAL;
         JButton editFormat = new JButton("Edit Format…  " + format);
         editFormat.addActionListener(e -> editFormat());
         panel.add(editFormat, c);
         menu.add(panel);
         return menu;
+    }
+
+    /** FileBot's Fetch & Match Data popup: datasource groups + format + preferences. */
+    private JPopupMenu buildFetchPopup() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.add(groupLabel("Episode Mode"));
+        for (String db : List.of("tvdb", "tmdb")) {
+            menu.add(item("  " + db, () -> {
+                dbBox.setSelectedItem(db);
+                modeControl.setSelected("episode");
+                match();
+            }));
+        }
+        menu.add(groupLabel("Movie Mode"));
+        for (String db : List.of("tmdb", "omdb")) {
+            menu.add(item("  " + db, () -> {
+                dbBox.setSelectedItem(db);
+                modeControl.setSelected("movie");
+                match();
+            }));
+        }
+        menu.add(groupLabel("Smart Mode"));
+        menu.add(item("  Automatic", () -> {
+            modeControl.setSelected("auto");
+            match();
+        }));
+        menu.add(groupLabel("Local Mode"));
+        menu.add(item("  Attributes (no network)", () -> {
+            modeControl.setSelected("local");
+            dbBox.setSelectedItem("local");
+            match();
+        }));
+        menu.addSeparator();
+        menu.add(item("Edit Format…", this::editFormat));
+        menu.add(item("Preferences…", () -> buildSettingsPopup().show(namesList, 40, 40)));
+        return menu;
+    }
+
+    private static JMenuItem groupLabel(String text) {
+        JMenuItem label = new JMenuItem(text);
+        label.setEnabled(false);
+        return label;
     }
 
     private JPopupMenu buildEditPopup() {
@@ -985,10 +1050,46 @@ public final class RenamePanel extends JPanel {
         } catch (Exception ignored) {
             // fall through to defaults
         }
+        // FileBot's 14 example presets + a Jellyfin favourite, adapted to Renami formats
         return List.of(
-                Map.of("name", "Episode", "format", "{n} - {s00e00} - {t}"),
-                Map.of("name", "Movie", "format", "{n} ({y})"),
-                Map.of("name", "Anniversary", "format", "{n} - {s00e00}"));
+                Map.of("name", "Organize Movies for Jellyfin", "format", "{n} ({y})/{n} ({y})"),
+                Map.of("name", "Organize Episodes for Jellyfin", "format", "{n}/Season {s}/{n} - {s00e00} - {t}"),
+                Map.of("name", "Match by Episode Title", "format", "{t}"),
+                Map.of("name", "Episode Number Only", "format", "{s00e00}"),
+                Map.of("name", "Season and Episode Numbers", "format", "{sn} {en}"),
+                Map.of("name", "Name and Episode Number", "format", "{n} - {s00e00}"),
+                Map.of("name", "Name, Number and Title", "format", "{n} - {s00e00} - {t}"),
+                Map.of("name", "Name with Year", "format", "{n} ({y})"),
+                Map.of("name", "Original Media Title", "format", "{fn}"),
+                Map.of("name", "File to Folder Name", "format", "{fn}/{fn}"),
+                Map.of("name", "Clean Name", "format", "{fn.replaceAll('[._]', ' ')}"),
+                Map.of("name", "Transliterate Non-ASCII", "format", "{fn.replaceAll('[^\\\\x20-\\\\x7E]', '_')}"),
+                Map.of("name", "Year First", "format", "({y}) {n}"),
+                Map.of("name", "Title Case Episodes", "format", "{n} - {s00e00}"),
+                Map.of("name", "Jellyfin Movies", "format", "{n} ({y})/{n} ({y})"));
+    }
+
+    /** F1–F12 apply presets 1–12, exactly like FileBot. */
+    private void installPresetKeys() {
+        InputMap keys = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        ActionMap actions = getActionMap();
+        for (int i = 0; i < 12; i++) {
+            final int index = i;
+            KeyStroke key = KeyStroke.getKeyStroke("F" + (i + 1));
+            keys.put(key, "preset" + index);
+            actions.put("preset" + index, new AbstractAction() {
+                @Override
+                public void actionPerformed(java.awt.event.ActionEvent e) {
+                    List<Map<String, String>> presets = loadPresets();
+                    if (index < presets.size()) {
+                        format = presets.get(index).get("format");
+                        applyFormat();
+                        statusLabel.setText("preset F" + (index + 1) + ": "
+                                + presets.get(index).getOrDefault("name", format));
+                    }
+                }
+            });
+        }
     }
 
     private void editPresets() {
@@ -1087,7 +1188,7 @@ public final class RenamePanel extends JPanel {
     private static JButton iconButton(String icon, String tooltip, java.awt.event.ActionListener action) {
         JButton button = new JButton(Ui.icon(icon, 15));
         button.setToolTipText(tooltip);
-        button.setMargin(new Insets(4, 6, 4, 6));
+        button.setMargin(new Insets(4, 4, 4, 4));
         return button;
     }
 
@@ -1101,7 +1202,7 @@ public final class RenamePanel extends JPanel {
                                        java.util.function.Supplier<JPopupMenu> menu) {
         JButton button = new JButton(Ui.icon(icon, 15));
         button.setToolTipText(tooltip);
-        button.setMargin(new Insets(4, 6, 4, 6));
+        button.setMargin(new Insets(4, 4, 4, 4));
         button.addActionListener(e -> menu.get().show(button, 0, button.getHeight()));
         return button;
     }

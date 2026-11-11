@@ -24,6 +24,13 @@ public final class RenamiTheme {
     /** SF Pro is Apple's system font; load it straight from the system folder. */
     private static final File SF_PRO = new File("/System/Library/Fonts/SFNS.ttf");
 
+    /**
+     * SFNS.ttf is a variable font whose advance widths Java2D under-reports,
+     * so tight label layouts clip their last glyph ("Original Files" -> "Original File").
+     * Helvetica Neue renders nearly identical on macOS and reports safe widths.
+     */
+    private static final String SAFE_UI_FONT = "Helvetica Neue";
+
     private RenamiTheme() {
     }
 
@@ -55,18 +62,24 @@ public final class RenamiTheme {
         return FlatLaf.isLafDark();
     }
 
-    /** @return SF Pro at UI size, or null when the system font is unavailable. */
+    /** @return the UI font at 13pt, or null when no safe font is available. */
     static Font systemUiFont() {
         try {
-            if (!SF_PRO.isFile()) {
-                return null;
+            java.util.Set<String> families = java.util.Arrays
+                    .stream(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames())
+                    .collect(java.util.stream.Collectors.toSet());
+            if (families.contains(SAFE_UI_FONT)) {
+                return new Font(SAFE_UI_FONT, Font.PLAIN, 13);
             }
-            Font base = Font.createFont(Font.TRUETYPE_FONT, SF_PRO);
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(base);
-            return base.deriveFont(Font.PLAIN, 13f);
+            if (SF_PRO.isFile()) {
+                Font base = Font.createFont(Font.TRUETYPE_FONT, SF_PRO);
+                GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(base);
+                return base.deriveFont(Font.PLAIN, 13f);
+            }
         } catch (Exception ignored) {
-            return null;
+            // fall through
         }
+        return null;
     }
 
     /** FlatLaf theme overrides: rounded geometry, accent, flat tables, slim scrollbars. */
