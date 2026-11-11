@@ -8,6 +8,14 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
 > publicly documented behavior and open-source third-party components. "FileBot" is a trademark of
 > its respective owner; Renami is an independent project.
 
+## Download
+
+Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
+
+- **Renami-1.3.0-macos.zip** — native macOS app with bundled Java runtime. Unsigned, so first
+  launch: right-click → Open. Drop files or a folder on the window, press **Match**, then **Rename**.
+- **renami-1.3.0-cli.zip** — command line (requires JDK 21+), or build from source below.
+
 ## Features
 
 - 🎬 **Media scanning** — recursive folder scan, video/audio detection
