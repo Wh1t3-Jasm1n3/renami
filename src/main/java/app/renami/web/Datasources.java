@@ -40,7 +40,7 @@ public final class Datasources {
         if (key == null) {
             throw new IllegalStateException("TMDb selected but no key set — set RENAMI_TMDB_API_KEY or tmdb.api.key in ~/.renami/config.properties");
         }
-        return new TmdbClient(key, http);
+        return new TmdbClient(key, http, config.get("datasource.language"));
     }
 
     private static Datasource tvdb(Config config, HttpJson http) {

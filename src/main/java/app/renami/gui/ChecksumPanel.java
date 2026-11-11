@@ -18,7 +18,7 @@ import java.util.stream.Stream;
  */
 public final class ChecksumPanel extends JPanel {
 
-    private final SegmentedControl algoControl = new SegmentedControl("crc32", "md5", "ed2k", "sha1", "sha256");
+    private final SegmentedControl algoControl = new SegmentedControl("crc32", "md5", "ed2k", "sha1", "sha256", "sha512");
     private final JTextField inputField = new JTextField(28);
     private final DefaultTableModel tableModel =
             new DefaultTableModel(new Object[]{"File", "Hash", "Status"}, 0) {
@@ -49,6 +49,27 @@ public final class ChecksumPanel extends JPanel {
         tableScroll.setBorder(BorderFactory.createEmptyBorder());
         Ui.styleTable(table);
         table.getColumnModel().getColumn(2).setCellRenderer(Ui.statusRenderer());
+        // FileBot's SFV table: Delete removes the selected rows
+        table.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("DELETE"), "deleteRows");
+        table.getActionMap().put("deleteRows", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                int[] selected = table.getSelectedRows();
+                for (int i = selected.length - 1; i >= 0; i--) {
+                    tableModel.removeRow(selected[i]);
+                }
+                // keep the in-memory entries in sync with what's visible
+                List<VerificationFile.Entry> kept = new ArrayList<>();
+                for (int row = 0; row < tableModel.getRowCount(); row++) {
+                    kept.add(new VerificationFile.Entry(
+                            String.valueOf(tableModel.getValueAt(row, 0)),
+                            String.valueOf(tableModel.getValueAt(row, 1))));
+                }
+                entries = kept;
+                saveButton.setEnabled(!entries.isEmpty());
+                statusLabel.setText(entries.size() + " entries");
+            }
+        });
         body.add(tableScroll, BorderLayout.CENTER);
         add(body, BorderLayout.CENTER);
 
@@ -59,6 +80,14 @@ public final class ChecksumPanel extends JPanel {
         buttons.add(Ui.prominent(generateButton));
         buttons.add(verifyButton);
         buttons.add(saveButton);
+        JButton clearButton = new JButton("Clear");
+        clearButton.addActionListener(e -> {
+            tableModel.setRowCount(0);
+            entries = List.of();
+            saveButton.setEnabled(false);
+            statusLabel.setText("cleared");
+        });
+        buttons.add(clearButton);
         bar.add(buttons, BorderLayout.WEST);
         statusLabel.setForeground(Ui.secondary());
         bar.add(statusLabel, BorderLayout.CENTER);
@@ -68,13 +97,16 @@ public final class ChecksumPanel extends JPanel {
         verifyButton.addActionListener(e -> verify());
         saveButton.addActionListener(e -> saveSidecar());
         saveButton.setEnabled(false);
-        FileDrop.register(this, dropped -> {
-            if (dropped.size() == 1) {
-                input = dropped.get(0);
-                inputField.setText(input.toString());
-                statusLabel.setText("press Generate to hash, or Verify against a sidecar");
-            }
-        });
+        FileDrop.register(this, this::acceptFiles);
+    }
+
+    /** Cross-mode transfer: files dropped onto the rail land here. */
+    public void acceptFiles(List<Path> dropped) {
+        if (dropped.size() == 1) {
+            input = dropped.get(0);
+            inputField.setText(input.toString());
+            statusLabel.setText("press Generate to hash, or Verify against a sidecar");
+        }
     }
 
     /** The primary action, so the frame can make it the default (Return) button. */

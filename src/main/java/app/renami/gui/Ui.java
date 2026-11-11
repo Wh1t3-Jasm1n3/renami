@@ -6,6 +6,7 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import java.awt.Color;
 import java.awt.Component;
@@ -59,7 +60,10 @@ public final class Ui {
     }
 
     public static Color accent() {
-        Color c = UIManager.getColor("Button.default.background");
+        Color c = UIManager.getColor("Component.accentColor");
+        if (c == null || c.getRed() > 240 && c.getGreen() > 240 && c.getBlue() > 240) {
+            c = UIManager.getColor("Button.default.background");
+        }
         return c != null ? c : (dark() ? new Color(0x0A, 0x84, 0xFF) : new Color(0x00, 0x71, 0xE3));
     }
 
@@ -105,16 +109,42 @@ public final class Ui {
 
     /** Tinted line icon from /icons, sized to the current text colour. */
     public static FlatSVGIcon icon(String name, int size) {
+        return icon(name, size, Ui::text);
+    }
+
+    /** Line icon tinted with an explicit colour supplier (re-read on every paint). */
+    public static FlatSVGIcon icon(String name, int size, java.util.function.Supplier<Color> tint) {
         FlatSVGIcon icon = new FlatSVGIcon("icons/" + name + ".svg", Ui.class.getClassLoader());
         FlatSVGIcon scaled = icon.derive((float) size / icon.getIconWidth());
-        scaled.setColorFilter(new FlatSVGIcon.ColorFilter(c -> text()));
+        scaled.setColorFilter(new FlatSVGIcon.ColorFilter(c -> tint.get()));
         return scaled;
+    }
+
+    /** Rail icons carry the app-icon colour: always the accent, like macOS source lists. */
+    public static FlatSVGIcon accentIcon(String name, int size) {
+        return icon(name, size, Ui::accent);
+    }
+
+    /** Parse a #RRGGBB hex colour (rail icon hues); darkens bright hues for light mode. */
+    public static Color hex(String value) {
+        Color c;
+        try {
+            c = Color.decode(value);
+        } catch (Exception e) {
+            return accent();
+        }
+        double lum = (0.299 * c.getRed() + 0.587 * c.getGreen() + 0.114 * c.getBlue()) / 255;
+        if (!dark() && lum > 0.55) {
+            c = mix(c, Color.BLACK, 0.28);
+        }
+        return c;
     }
 
     // ---- components ----
 
     /** The primary action button: larger, and the frame's default (Return) button. */
     public static <T extends JButton> T prominent(T button) {
+        button.putClientProperty("JButton.buttonType", "prominent");
         button.putClientProperty("JComponent.sizeVariant", "large");
         return button;
     }
@@ -132,6 +162,7 @@ public final class Ui {
         JLabel label = new JLabel(title);
         label.setFont(title(22f));
         label.setForeground(text());
+        label.setHorizontalAlignment(SwingConstants.CENTER);
         return label;
     }
 

@@ -23,6 +23,8 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.datatransfer.DataFlavor;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -34,7 +36,7 @@ import java.util.function.Consumer;
  */
 final class Sidebar extends JPanel {
 
-    record Item(String id, String label, String icon) {
+    record Item(String id, String label, String icon, String color) {
     }
 
     private static final int WIDE = 150;
@@ -43,6 +45,7 @@ final class Sidebar extends JPanel {
     private final JList<Item> list;
     private final List<Item> moreItems;
     private final Consumer<String> onSelect;
+    private final java.util.function.BiConsumer<String, List<Path>> onFilesDropped;
     private final JLabel nameLabel;
     private final JButton collapseButton;
     private final JButton moreButton;
@@ -50,13 +53,15 @@ final class Sidebar extends JPanel {
     private final JPanel footer;
     private boolean collapsed;
 
-    Sidebar(List<Item> items, List<Item> moreItems, Consumer<String> onSelect) {
+    Sidebar(List<Item> items, List<Item> moreItems, Consumer<String> onSelect,
+            java.util.function.BiConsumer<String, List<Path>> onFilesDropped) {
         super(new BorderLayout());
         setOpaque(true);
         setBackground(Ui.surface());
         setPreferredSize(new Dimension(WIDE, 0));
         this.moreItems = moreItems;
         this.onSelect = onSelect;
+        this.onFilesDropped = onFilesDropped;
 
         JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
@@ -101,13 +106,47 @@ final class Sidebar extends JPanel {
         scroller.setBorder(BorderFactory.createEmptyBorder());
         add(scroller, BorderLayout.CENTER);
 
+        // FileBot's cross-mode transfer: drop files onto a rail mode to switch and pipe them in
+        list.setDropMode(javax.swing.DropMode.ON);
+        list.setTransferHandler(new javax.swing.TransferHandler() {
+            @Override
+            public boolean canImport(javax.swing.TransferHandler.TransferSupport support) {
+                return support.isDrop() && support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public boolean importData(javax.swing.TransferHandler.TransferSupport support) {
+                if (!canImport(support)) {
+                    return false;
+                }
+                try {
+                    List<java.io.File> files =
+                            (List<java.io.File>) support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    JList.DropLocation loc = list.getDropLocation();
+                    int index = loc != null ? loc.getIndex() : -1;
+                    Item item = index >= 0 && index < list.getModel().getSize()
+                            ? list.getModel().getElementAt(index)
+                            : list.getSelectedValue();
+                    if (item == null) {
+                        return false;
+                    }
+                    list.setSelectedValue(item, true);
+                    onFilesDropped.accept(item.id(), files.stream().map(java.io.File::toPath).toList());
+                    return true;
+                } catch (Exception ex) {
+                    return false;
+                }
+            }
+        });
+
         footer = new JPanel(new BorderLayout(0, 4));
         footer.setOpaque(false);
         footer.setBorder(BorderFactory.createEmptyBorder(6, 8, 10, 8));
         JPanel row = new JPanel();
         row.setOpaque(false);
         row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
-        moreButton = new JButton(Ui.icon("more", 16));
+        moreButton = new JButton(Ui.icon("more", 18));
         moreButton.setFocusable(false);
         moreButton.setToolTipText("More views");
         moreButton.addActionListener(e -> showMorePopup(moreButton));
@@ -118,7 +157,7 @@ final class Sidebar extends JPanel {
         row.add(Box.createHorizontalStrut(6));
         row.add(moreLabel);
         row.add(Box.createHorizontalGlue());
-        JButton themeButton = new JButton(Ui.icon("theme", 16));
+        JButton themeButton = new JButton(Ui.icon("theme", 18));
         themeButton.setFocusable(false);
         themeButton.setToolTipText("Theme");
         themeButton.addActionListener(e -> showThemePopup(themeButton));
@@ -167,7 +206,7 @@ final class Sidebar extends JPanel {
     private void showMorePopup(Component anchor) {
         JPopupMenu menu = new JPopupMenu();
         for (Item item : moreItems) {
-            JMenuItem mi = new JMenuItem(item.label(), Ui.icon(item.icon(), 15));
+            JMenuItem mi = new JMenuItem(item.label(), Ui.icon(item.icon(), 16, () -> Ui.hex(item.color())));
             mi.addActionListener(e -> onSelect.accept(item.id()));
             menu.add(mi);
         }
@@ -222,26 +261,28 @@ final class Sidebar extends JPanel {
         public Component getListCellRendererComponent(JList<? extends Item> list, Item item, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
             Cell cell = new Cell();
-            JLabel icon = new JLabel(Ui.icon(item.icon(), 22));
+            JLabel icon = new JLabel(Ui.icon(item.icon(), 26, () -> Ui.hex(item.color())));
             icon.setAlignmentX(CENTER_ALIGNMENT);
-            cell.add(Box.createVerticalStrut(8));
+            cell.add(Box.createVerticalStrut(9));
             cell.add(icon);
             if (!collapsed) {
                 JLabel label = new JLabel(item.label());
                 label.setAlignmentX(CENTER_ALIGNMENT);
                 label.setFont(Ui.body().deriveFont(Font.PLAIN, 12f));
                 label.setForeground(Ui.text());
-                cell.add(Box.createVerticalStrut(4));
+                cell.add(Box.createVerticalStrut(5));
                 cell.add(label);
             }
-            cell.add(Box.createVerticalStrut(8));
+            cell.add(Box.createVerticalStrut(9));
             cell.selected = isSelected;
+            cell.tint = Ui.hex(item.color());
             return cell;
         }
     }
 
     private static final class Cell extends JPanel {
         boolean selected;
+        Color tint = Ui.accent();
 
         Cell() {
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -256,7 +297,7 @@ final class Sidebar extends JPanel {
                 // subtle plate, not a saturated fill: text and icon stay legible
                 g2.setColor(Ui.dark() ? new Color(255, 255, 255, 26) : new Color(0, 0, 0, 22));
                 g2.fillRoundRect(2, 2, getWidth() - 5, getHeight() - 5, 10, 10);
-                g2.setColor(Ui.accent());
+                g2.setColor(tint);
                 g2.fillRoundRect(4, 10, 3, getHeight() - 21, 3, 3);
                 g2.dispose();
             }

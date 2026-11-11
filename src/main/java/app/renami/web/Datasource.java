@@ -28,6 +28,14 @@ public interface Datasource {
     }
 
     /**
+     * Season episodes in a specific ordering and series language.
+     * Providers without localized episode names ignore the language.
+     */
+    default List<EpisodeInfo> getSeason(String showId, int season, String order, String language) throws IOException {
+        return getSeason(showId, season, order);
+    }
+
+    /**
      * Resolve an absolute (anime-style) episode number to a concrete season/episode.
      * Datasources with their own absolute order answer from their episode list;
      * providers without one can fall back to community mappings (see TheXEM).

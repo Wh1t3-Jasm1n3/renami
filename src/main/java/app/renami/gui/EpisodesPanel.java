@@ -36,6 +36,9 @@ import java.util.concurrent.atomic.AtomicReference;
 final class EpisodesPanel extends JPanel {
 
     private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"tvdb", "tmdb"});
+    private final JComboBox<String> orderBox = new JComboBox<>(new String[]{"default", "aired", "dvd", "absolute"});
+    private final JComboBox<String> langBox = new JComboBox<>(
+            new String[]{"en", "de", "es", "fr", "it", "ja", "ko", "nl", "pl", "pt", "ru", "sv", "tr", "zh"});
     private final JTextField searchField = new JTextField(24);
     private final DefaultTableModel showsModel =
             new DefaultTableModel(new Object[]{"Series", "Year"}, 0) {
@@ -92,7 +95,6 @@ final class EpisodesPanel extends JPanel {
         search.add(searchButton);
         top.add(search, BorderLayout.SOUTH);
         add(top, BorderLayout.NORTH);
-
         JPanel split = new JPanel(new BorderLayout(12, 0));
         split.setOpaque(false);
         split.add(card("Series", showsTable), BorderLayout.WEST);
@@ -105,6 +107,17 @@ final class EpisodesPanel extends JPanel {
         tools.setOpaque(false);
         tools.add(Ui.caption("Season"));
         tools.add(seasonSpinner);
+        tools.add(Ui.caption("Order"));
+        tools.add(orderBox);
+        tools.add(Ui.caption("Language"));
+        tools.add(langBox);
+        langBox.setEditable(true);
+        String savedLang = Config.load().get("datasource.language");
+        if (savedLang != null) {
+            langBox.getEditor().setItem(savedLang);
+        }
+        langBox.addActionListener(e -> Config.set("datasource.language",
+                langBox.getEditor().getItem().toString().trim()));
         JButton load = new JButton("Load season");
         load.addActionListener(e -> loadSeason());
         tools.add(load);
@@ -112,10 +125,13 @@ final class EpisodesPanel extends JPanel {
         copy.addActionListener(e -> copyNames());
         JButton send = new JButton("Send to Rename");
         send.addActionListener(e -> sendToRename());
+        JButton save = new JButton("Save…");
+        save.addActionListener(e -> saveNames());
         bottom.add(tools, BorderLayout.WEST);
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
         right.add(copy);
+        right.add(save);
         right.add(send);
         bottom.add(right, BorderLayout.EAST);
         statusLabel.setForeground(Ui.secondary());
@@ -129,6 +145,83 @@ final class EpisodesPanel extends JPanel {
                 loadSeason();
             }
         });
+
+        // FileBot's episode row context menu: Send to / Copy / Save / Select All / Delete
+        episodesTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                maybeShowMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                maybeShowMenu(e);
+            }
+
+            private void maybeShowMenu(java.awt.event.MouseEvent e) {
+                if (!e.isPopupTrigger()) {
+                    return;
+                }
+                int row = episodesTable.rowAtPoint(e.getPoint());
+                if (row >= 0 && !episodesTable.isRowSelected(row)) {
+                    episodesTable.setRowSelectionInterval(row, row);
+                }
+                javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+                menu.add(menuItem("Send to Rename", EpisodesPanel.this::sendToRename));
+                menu.add(menuItem("Copy", EpisodesPanel.this::copyNames));
+                menu.add(menuItem("Save…", EpisodesPanel.this::saveNames));
+                menu.addSeparator();
+                menu.add(menuItem("Select All", () ->
+                        episodesTable.setRowSelectionInterval(0, episodesTable.getRowCount() - 1)));
+                menu.add(menuItem("Delete", () -> {
+                    int[] selected = episodesTable.getSelectedRows();
+                    List<EpisodeInfo> kept = new java.util.ArrayList<>(episodes.get());
+                    for (int i = selected.length - 1; i >= 0; i--) {
+                        if (selected[i] < kept.size()) {
+                            kept.remove(selected[i]);
+                        }
+                    }
+                    episodes.set(kept);
+                    episodesModel.setRowCount(0);
+                    for (EpisodeInfo ep : kept) {
+                        episodesModel.addRow(new Object[]{ep.episode(),
+                                String.format("S%02dE%02d", ep.season(), ep.episode()),
+                                ep.name() == null ? "" : ep.name(),
+                                ep.airDate() == null ? "" : ep.airDate()});
+                    }
+                    statusLabel.setText(kept.size() + " episodes");
+                }));
+                menu.show(episodesTable, e.getX(), e.getY());
+            }
+        });
+    }
+
+    private static javax.swing.JMenuItem menuItem(String text, Runnable action) {
+        javax.swing.JMenuItem item = new javax.swing.JMenuItem(text);
+        item.addActionListener(e -> action.run());
+        return item;
+    }
+
+    /** FileBot's Save button: export the episode list to a text file. */
+    private void saveNames() {
+        String text = namesJoined();
+        if (text.isEmpty()) {
+            statusLabel.setText("no episodes loaded");
+            return;
+        }
+        javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+        chooser.setDialogTitle("Save episode list");
+        chooser.setSelectedFile(new java.io.File("episodes.txt"));
+        if (chooser.showSaveDialog(this) != javax.swing.JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        try {
+            java.nio.file.Files.writeString(chooser.getSelectedFile().toPath(), text + System.lineSeparator());
+            statusLabel.setText("saved " + episodes.get().size() + " episodes to "
+                    + chooser.getSelectedFile().getName());
+        } catch (java.io.IOException ex) {
+            statusLabel.setText("save failed: " + ex.getMessage());
+        }
     }
 
     private JComponent card(String title, JTable table) {
@@ -184,7 +277,9 @@ final class EpisodesPanel extends JPanel {
         new Thread(() -> {
             try {
                 Datasource db = Datasources.create(Config.load(), (String) dbBox.getSelectedItem(), false);
-                List<EpisodeInfo> found = db.getSeason(show.id(), season);
+                String order = (String) orderBox.getSelectedItem();
+                String language = langBox.getEditor().getItem().toString().trim();
+                List<EpisodeInfo> found = db.getSeason(show.id(), season, order, language.isEmpty() ? null : language);
                 SwingUtilities.invokeLater(() -> {
                     episodes.set(found);
                     episodesModel.setRowCount(0);

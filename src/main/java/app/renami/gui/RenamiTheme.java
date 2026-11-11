@@ -112,6 +112,19 @@ public final class RenamiTheme {
         // macOS blue as the accent base; a user-picked system accent still wins
         m.put("@accentBaseColor", dark ? "#0A84FF" : "#0071E3");
 
+        // the default (Return) button carries the app-icon colour: accent-filled, white label
+        String accent = dark ? "#0A84FF" : "#0071E3";
+        String accentHover = dark ? "#3395FF" : "#1A82F0";
+        String accentPressed = dark ? "#0060C0" : "#0058B0";
+        m.put("Button.default.background", accent);
+        m.put("Button.default.foreground", "#FFFFFF");
+        m.put("Button.default.hoverBackground", accentHover);
+        m.put("Button.default.pressedBackground", accentPressed);
+        m.put("Button.default.selectedBackground", accentPressed);
+        m.put("Button.default.focusedBackground", accent);
+        m.put("Button.default.disabledBackground", dark ? "#3A3E40" : "#D9D9DE");
+        m.put("Button.default.disabledForeground", dark ? "#8E9294" : "#9A9AA0");
+
         // rounded controls with a macOS-style focus ring
         m.put("Button.arc", "10");
         m.put("Component.arc", "8");

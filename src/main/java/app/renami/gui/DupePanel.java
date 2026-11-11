@@ -51,14 +51,17 @@ public final class DupePanel extends JPanel {
         add(bar, BorderLayout.SOUTH);
 
         findButton.addActionListener(e -> find());
-        FileDrop.register(this, dropped -> {
-            if (dropped.size() == 1 && Files.isDirectory(dropped.get(0))) {
-                inputField.setText(dropped.get(0).toString());
-                statusLabel.setText("folder dropped");
-            } else {
-                statusLabel.setText("drop a folder to scan for duplicates");
-            }
-        });
+        FileDrop.register(this, this::acceptFiles);
+    }
+
+    /** Cross-mode transfer: files dropped onto the rail land here. */
+    public void acceptFiles(List<Path> dropped) {
+        if (dropped.size() == 1 && Files.isDirectory(dropped.get(0))) {
+            inputField.setText(dropped.get(0).toString());
+            statusLabel.setText("folder dropped");
+        } else {
+            statusLabel.setText("drop a folder to scan for duplicates");
+        }
     }
 
     /** The primary action, so the frame can make it the default (Return) button. */

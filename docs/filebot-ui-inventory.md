@@ -136,3 +136,103 @@ Dragging files onto a rail mode switches mode and pipes the drop into that panel
 | Format field inline | Moves into **Edit Format** dialog (FileBot has no inline format field in 5.x) |
 | Action/Conflict selectors | Inside **Settings** popup (Action) + conflict dialog at Rename time |
 | Match details (F6/Space) | Later milestone |
+
+---
+
+## Per-button audit (FileBot 5.2.1 → Renami 1.6.0)
+
+Legend: ✅ present · 🆕 added in this pass · 🔶 simplified equivalent · ⛔ intentionally not built.
+
+### 1. App chrome
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Mode rail (icon + label, selection persisted) | ✅ | Sidebar rail, colored icons, selection plate |
+| Drag-over rail mode → switch + transfer files | 🆕 | `Sidebar` TransferHandler → `RenamiFrame.transferFiles` |
+| Centered mode title header | ✅ | `Ui.header` centered in every view |
+| Hidden label → GroovyPad / version | ⛔ | no script console; About box instead (`showAbout`) |
+| Help menu (macOS menu bar) | 🆕 | `installMenuBar`: Getting Started / FAQ / Report Bugs / Request Help / Check for Updates |
+| Ctrl+Shift+Delete clear cache | ⛔ | cache managed automatically |
+| F5 GroovyPad | ⛔ | — |
+| Light/dark/auto theme | ✅ | theme picker in rail footer, persisted |
+| Collapsible rail | ✅ | header collapse button |
+
+### 2. Rename view
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Dual panel + center Match/Rename | ✅ | icon-over-text center column; Rename is accent-filled default button |
+| Match right-click → Fetch popup | ✅ | `buildFetchPopup` |
+| Rename right-click → Settings popup | ✅ | `buildSettingsPopup` (action, conflict, companion) |
+| Align Down/Up both lists | ✅ | up/down strip buttons |
+| Exclude Selected Items (Delete/Shift+Delete) | ✅ | exclude button + both keys |
+| Load | ✅ | Load button + drop zone + Choose |
+| Clear dropdown (Original/New/All) | ✅ | clear icon popup |
+| Open History | ✅ | History rail view |
+| Presets (F1–F12 + editor) | ✅ | presets popup, F1–F12 keys, local presets |
+| Double-click row → Open/Reveal/Rename…/Move to Trash | 🆕 | `buildOriginalRowPopup` + `renameFileDirect`/`moveToTrash` |
+| Right-click row → Fetch & Match popup | ✅ | scoped to selection |
+| Fetch Data popup (datasource + Edit Format + Preferences) | ✅ | `buildFetchPopup` |
+| Load Names: Directory Index / Text File / Clipboard | 🆕 | Directory Index added |
+| Settings popup (extension, action, post-process) | 🔶 | action + conflict + companions; no post-process grid (separate Post-Process view) |
+| Edit popup: Edit Format / Edit Match / Edit Name / Inspect | 🆕 | Edit Match added (`editMatch` + candidate picker) |
+| Match details panel (F6/Space) | ⛔ | later milestone; Inspect dialog covers it |
+| Keys Ctrl+N / Ctrl+M / Ctrl+O / Ctrl+L | 🆕 | all four wired |
+
+### 3. Episodes view
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Datasource select | ✅ | Source combo (tvdb/tmdb) |
+| Search + Find | ✅ | Search field + button, Enter submits |
+| Season spinner | ✅ | spinner |
+| Order combo (aired/dvd/absolute) | 🆕 | wired to `getSeason(id,season,order,language)` |
+| Language combo | 🆕 | persisted as `datasource.language`, sent to TMDb/TVDB |
+| Search history tabs | 🔶 | single result table |
+| Copy / Send to Rename | ✅ | both buttons |
+| Group (multi-episode) | ⛔ | later milestone |
+| Save (export list) | 🆕 | Save… file chooser |
+| Row context menu (Send to/Copy/Save/Select All/Delete) | 🆕 | added |
+
+### 4. Subtitles view
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Search + language | ✅ | folder scan + language combo |
+| Login (OpenSubtitles) | 🆕 | Login… dialog, key persisted |
+| Filter field + clear icon | 🆕 | live refilter + clear button |
+| Download / double-click download | ✅ | Download button + double-click single row |
+| Preview / Save As / Export | ⛔ | later milestone |
+| Upload drop target | ⛔ | OpenSubtitles upload API not built |
+
+### 5. Checksum (SFV) view
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Load | ✅ | folder/file field + Choose + drop |
+| Save as… | ✅ | Save sidecar… |
+| Clear | 🆕 | Clear button |
+| Hash toggle CRC32/MD5/SHA-1/SHA-256/SHA-512 | 🆕 | SHA-512 added to `HashType` + segmented control |
+| Table + Delete removes rows | 🆕 | Delete key wired |
+| Verify against sidecar | ✅ | Verify… (OK/MISMATCH/MISSING) |
+
+### 6. Filter view
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Folder tree | 🔶 | folder field + scan |
+| Extract/Type/Split/Attribute/MediaInfo tabs | 🔶 | Groovy predicate + type chips (Archives/Video/Audio/Images) |
+| Send to Rename | ✅ | button |
+
+### 7. List view
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| List mode | ⛔ | Original Files list covers browsing |
+
+### 8. Cross-mode transfer
+
+| FileBot control | Status | Renami |
+|---|---|---|
+| Drop files on rail mode → switch + pipe in | 🆕 | rail TransferHandler + `acceptFiles`/`preload` per panel |
+| Episodes "Send to" Rename | ✅ | button + context menu |

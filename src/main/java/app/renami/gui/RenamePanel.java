@@ -138,6 +138,10 @@ public final class RenamePanel extends JPanel {
     /** Preload files or a folder opened from the command line. */
     public void preload(List<Path> dropped) {
         addFiles(dropped);
+        // GUI smoke-test hook: -Drenami.automatch=true runs Match right after preload
+        if (Boolean.getBoolean("renami.automatch") && !rows.isEmpty()) {
+            SwingUtilities.invokeLater(this::match);
+        }
     }
 
     /** Replace the row model with explicit pairings (used by render checks and tests). */
@@ -205,16 +209,16 @@ public final class RenamePanel extends JPanel {
         column.setOpaque(false);
         column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
         column.add(Box.createVerticalGlue());
-        column.add(centerButton(matchButton, "match", 92));
+        column.add(centerButton(matchButton, "match", 92, false));
         column.add(Box.createVerticalStrut(14));
-        column.add(centerButton(renameButton, "rename", 92));
+        column.add(centerButton(renameButton, "rename", 92, true));
         column.add(Box.createVerticalGlue());
         return column;
     }
 
     /** Icon-over-text action button, FileBot's center column, our styling. */
-    private static JComponent centerButton(JButton button, String icon, int size) {
-        button.setIcon(Ui.icon(icon, size - 34));
+    private static JComponent centerButton(JButton button, String icon, int size, boolean prominent) {
+        button.setIcon(Ui.icon(icon, size - 34, prominent ? () -> Color.WHITE : Ui::text));
         button.setVerticalTextPosition(SwingConstants.BOTTOM);
         button.setHorizontalTextPosition(SwingConstants.CENTER);
         button.putClientProperty("JButton.buttonType", "square");
@@ -276,14 +280,14 @@ public final class RenamePanel extends JPanel {
         originalList.addMouseListener(openMenu);
         namesList.addMouseListener(openMenu);
 
-        // double-click: left opens the file, right edits the name
+        // double-click: left shows FileBot's row popup, right edits the name
         originalList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
                     Pair pair = selected(originalList);
                     if (pair != null) {
-                        openFile(pair.source());
+                        buildOriginalRowPopup().show(originalList, e.getX(), e.getY());
                     }
                 }
             }
@@ -319,6 +323,38 @@ public final class RenamePanel extends JPanel {
                 if (pair != null) {
                     openFile(pair.source());
                 }
+            }
+        });
+        // FileBot keyboard parity: Ctrl+L reveal, Ctrl+N edit name, Ctrl+M edit match
+        keys.put(KeyStroke.getKeyStroke("control L"), "reveal");
+        actions.put("reveal", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                Pair pair = selected(isOriginal ? originalList : namesList);
+                if (pair != null) {
+                    revealFile(pair.source());
+                }
+            }
+        });
+        keys.put(KeyStroke.getKeyStroke("control N"), "editNameKey");
+        actions.put("editNameKey", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                editName();
+            }
+        });
+        keys.put(KeyStroke.getKeyStroke("control M"), "editMatch");
+        actions.put("editMatch", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                editMatch();
+            }
+        });
+        keys.put(KeyStroke.getKeyStroke("shift DELETE"), "excludeShift");
+        actions.put("excludeShift", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                removeSelected();
             }
         });
         keys.put(KeyStroke.getKeyStroke("F2"), "editName");
@@ -738,8 +774,9 @@ public final class RenamePanel extends JPanel {
 
     private JPopupMenu buildLoadNamesPopup() {
         JPopupMenu menu = new JPopupMenu();
-        menu.add(item("Paste from Clipboard", this::pasteNames));
+        menu.add(item("Load from Directory Index…", this::loadNamesFromDirectoryIndex));
         menu.add(item("Load from Text File…", this::loadNamesFromFile));
+        menu.add(item("Paste from Clipboard", this::pasteNames));
         return menu;
     }
 
@@ -878,6 +915,7 @@ public final class RenamePanel extends JPanel {
     private JPopupMenu buildEditPopup() {
         JPopupMenu menu = new JPopupMenu();
         menu.add(item("Edit Name…  (F2)", this::editName));
+        menu.add(item("Edit Match…", this::editMatch));
         menu.add(item("Edit Format…", this::editFormat));
         menu.addSeparator();
         Pair pair = selected(namesList);
@@ -895,6 +933,8 @@ public final class RenamePanel extends JPanel {
         if (pair != null) {
             menu.add(item("Open", () -> openFile(pair.source())));
             menu.add(item("Reveal in Finder", () -> revealFile(pair.source())));
+            menu.add(item("Rename…", () -> renameFileDirect(pair.source())));
+            menu.add(item("Move to Trash", () -> moveToTrash(pair.source())));
             menu.addSeparator();
         }
         menu.add(item("Exclude Selected Items", this::removeSelected));
@@ -930,6 +970,182 @@ public final class RenamePanel extends JPanel {
             rows.set(index, new Pair(pair.source(), target,
                     target.equals(pair.source()) ? STATUS_UNCHANGED : STATUS_RENAME));
             renameButton.setEnabled(hasPlanned());
+        }
+    }
+
+    /** FileBot's "Edit Match": pick a different movie/show from the datasource. */
+    private void editMatch() {
+        Pair pair = selected(namesList);
+        if (pair == null) {
+            pair = selected(originalList);
+        }
+        if (pair == null) {
+            return;
+        }
+        final Path source = pair.source();
+        statusLabel.setText("fetching candidates…");
+        new SwingWorker<List<String[]>, Void>() {
+            @Override
+            protected List<String[]> doInBackground() throws Exception {
+                Datasource db = Datasources.create(Config.load(), (String) dbBox.getSelectedItem(), false);
+                RenameService svc = new RenameService(db,
+                        new java.io.PrintStream(java.io.OutputStream.nullOutputStream()));
+                boolean episode = svc.episodeOf(source) != null;
+                List<String[]> rows = new java.util.ArrayList<>();
+                if (episode) {
+                    app.renami.parse.EpisodeNumber ep = svc.episodeOf(source);
+                    for (RenameService.ShowCandidate c : svc.showCandidates(source)) {
+                        rows.add(new String[]{"show", c.show().name(),
+                                c.show().year() > 0 ? String.valueOf(c.show().year()) : "",
+                                String.format("%.0f%%", c.score() * 100),
+                                String.valueOf(ep.season()), String.valueOf(ep.episode())});
+                    }
+                } else {
+                    for (RenameService.Candidate c : svc.movieCandidates(source)) {
+                        rows.add(new String[]{"movie", c.movie().title(),
+                                c.movie().year() > 0 ? String.valueOf(c.movie().year()) : "",
+                                String.format("%.0f%%", c.score() * 100), "", ""});
+                    }
+                }
+                return rows;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<String[]> found = get();
+                    if (found.isEmpty()) {
+                        statusLabel.setText("no candidates found");
+                        return;
+                    }
+                    chooseCandidate(source, found);
+                } catch (Exception ex) {
+                    statusLabel.setText("candidate lookup failed");
+                }
+            }
+        }.execute();
+    }
+
+    /** Table dialog over the fetched candidates; applies the chosen match to the row. */
+    private void chooseCandidate(Path source, List<String[]> found) {
+        DefaultTableModel model = new DefaultTableModel(
+                new Object[]{"Title", "Year", "Score"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        for (String[] c : found) {
+            model.addRow(new Object[]{c[1], c[2], c[3]});
+        }
+        JTable table = new JTable(model);
+        Ui.styleTable(table);
+        table.setRowSelectionInterval(0, 0);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setPreferredSize(new Dimension(460, 260));
+        if (JOptionPane.showConfirmDialog(this, scroll, "Edit Match — pick the correct title",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) {
+            return;
+        }
+        String[] chosen = found.get(table.getSelectedRow());
+        Integer year = chosen[2].isEmpty() ? null : Integer.parseInt(chosen[2]);
+        Map<String, Object> vars;
+        if ("show".equals(chosen[0])) {
+            app.renami.parse.EpisodeNumber ep =
+                    new app.renami.parse.EpisodeNumber(Integer.parseInt(chosen[4]), Integer.parseInt(chosen[5]));
+            vars = FormatEngine.standardVars(chosen[1], year, ep.format(), "", ep.season(), ep.episode());
+        } else {
+            vars = FormatEngine.standardVars(chosen[1], year, null, null, null, null);
+        }
+        String name = RenameService.sanitize(FormatEngine.format(format, vars));
+        Path target = source.resolveSibling(name + "." + MediaScanner.extension(source));
+        int index = indexOfSource(source);
+        if (index >= 0) {
+            rows.set(index, new Pair(source, target,
+                    target.equals(source) ? STATUS_UNCHANGED : STATUS_RENAME));
+            Map<Path, Map<String, Object>> updated = new java.util.LinkedHashMap<>(lastVars);
+            updated.put(source, vars);
+            lastVars = updated;
+            renameButton.setEnabled(hasPlanned());
+        }
+        statusLabel.setText("match changed to " + chosen[1]);
+    }
+
+    /** FileBot's "Rename…" on the Original Files list: rename the file on disk now. */
+    private void renameFileDirect(Path file) {
+        String current = file.getFileName().toString();
+        String input = JOptionPane.showInputDialog(this, "Rename file on disk:", current);
+        if (input == null || input.isBlank()) {
+            return;
+        }
+        try {
+            Path target = file.resolveSibling(RenameService.sanitize(input));
+            if (target.equals(file)) {
+                return;
+            }
+            Files.move(file, target);
+            history.record(List.of(new app.renami.rename.RenameOperation(file, target)));
+            int index = indexOfSource(file);
+            if (index >= 0) {
+                Pair pair = rows.get(index);
+                Path newTarget = pair.target().equals(file) ? target : pair.target();
+                rows.set(index, new Pair(target, newTarget,
+                        newTarget.equals(target) ? STATUS_UNCHANGED : STATUS_RENAME));
+                renameButton.setEnabled(hasPlanned());
+            }
+            statusLabel.setText("renamed " + current);
+        } catch (Exception e) {
+            statusLabel.setText("rename failed: " + e.getMessage());
+        }
+    }
+
+    /** FileBot's "Move to Trash" on the Original Files list. */
+    private void moveToTrash(Path file) {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Move " + file.getFileName() + " to the Trash?", "Move to Trash",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+        try {
+            java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+            boolean trashed = desktop.isSupported(java.awt.Desktop.Action.MOVE_TO_TRASH)
+                    && desktop.moveToTrash(file.toFile());
+            if (!trashed) {
+                statusLabel.setText("could not move to Trash");
+                return;
+            }
+            int index = indexOfSource(file);
+            if (index >= 0) {
+                rows.remove(index);
+                renameButton.setEnabled(hasPlanned());
+            }
+            statusLabel.setText("moved to Trash: " + file.getFileName());
+        } catch (Exception e) {
+            statusLabel.setText("could not move to Trash: " + e.getMessage());
+        }
+    }
+
+    /** FileBot's "Load from Directory Index": names come from the files in a folder. */
+    private void loadNamesFromDirectoryIndex() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        chooser.setDialogTitle("Load names from the files in this folder");
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        try (var stream = Files.list(chooser.getSelectedFile().toPath())) {
+            List<String> names = stream.filter(Files::isRegularFile)
+                    .map(p -> {
+                        String n = p.getFileName().toString();
+                        int dot = n.lastIndexOf('.');
+                        return dot > 0 ? n.substring(0, dot) : n;
+                    })
+                    .sorted()
+                    .toList();
+            setNamesFromText(String.join("\n", names));
+        } catch (Exception e) {
+            statusLabel.setText("could not read that folder");
         }
     }
 
@@ -1156,7 +1372,7 @@ public final class RenamePanel extends JPanel {
     // ============================================================
 
     private static JButton iconButton(String icon, String tooltip, java.awt.event.ActionListener action) {
-        JButton button = new JButton(Ui.icon(icon, 15));
+        JButton button = new JButton(Ui.icon(icon, 18));
         button.setToolTipText(tooltip);
         button.setMargin(new Insets(4, 4, 4, 4));
         return button;
@@ -1170,7 +1386,7 @@ public final class RenamePanel extends JPanel {
 
     private static JButton popupButton(String icon, String tooltip,
                                        java.util.function.Supplier<JPopupMenu> menu) {
-        JButton button = new JButton(Ui.icon(icon, 15));
+        JButton button = new JButton(Ui.icon(icon, 18));
         button.setToolTipText(tooltip);
         button.setMargin(new Insets(4, 4, 4, 4));
         button.addActionListener(e -> menu.get().show(button, 0, button.getHeight()));

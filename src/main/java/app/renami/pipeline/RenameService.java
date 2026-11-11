@@ -65,6 +65,39 @@ public final class RenameService {
     public record Match(Item item, ShowInfo show, EpisodeInfo episode) {
     }
 
+    /** A datasource hit with its match score (GUI "Edit Match" picker). */
+    public record Candidate(MovieInfo movie, double score) {
+    }
+
+    public record ShowCandidate(ShowInfo show, double score) {
+    }
+
+    /** Ranked movie candidates for one file, best first (max 25). */
+    public List<Candidate> movieCandidates(Path file) throws Exception {
+        ReleaseInfo info = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file));
+        return datasource.searchMovie(info.titleGuess(), info.year()).stream()
+                .map(m -> new Candidate(m, scoreMovie(info, m)))
+                .sorted(Comparator.comparingDouble(Candidate::score).reversed())
+                .limit(25)
+                .toList();
+    }
+
+    /** Ranked show candidates for one episode file, best first (max 25). */
+    public List<ShowCandidate> showCandidates(Path file) throws Exception {
+        ReleaseInfo info = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file));
+        return datasource.searchShow(info.titleGuess(), 0).stream()
+                .map(s -> new ShowCandidate(s, NameScorer.scoreRaw(info.titleGuess(), s.name())))
+                .sorted(Comparator.comparingDouble(ShowCandidate::score).reversed())
+                .limit(25)
+                .toList();
+    }
+
+    /** The parsed episode number for a file, or null when the name has none. */
+    public EpisodeNumber episodeOf(Path file) {
+        ReleaseInfo info = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file));
+        return info.episode();
+    }
+
     private final Datasource datasource;
     private final PrintStream log;
 

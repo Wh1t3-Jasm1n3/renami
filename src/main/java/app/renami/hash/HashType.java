@@ -16,7 +16,8 @@ public enum HashType {
     MD5("MD5", 32),
     ED2K("ED2K", 32),
     SHA1("SHA-1", 40),
-    SHA256("SHA-256", 64);
+    SHA256("SHA-256", 64),
+    SHA512("SHA-512", 128);
 
     /** eD2k chunking threshold: 4 MiB. */
     private static final int ED2K_CHUNK = 4 * 1024 * 1024;

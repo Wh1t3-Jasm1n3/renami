@@ -26,10 +26,17 @@ public final class TmdbClient implements Datasource {
 
     private final HttpJson http;
     private final Map<String, String> auth;
+    private final String language;
 
     public TmdbClient(String accessToken, HttpJson http) {
+        this(accessToken, http, null);
+    }
+
+    /** @param language optional series-language (e.g. "de") for localized episode names */
+    public TmdbClient(String accessToken, HttpJson http, String language) {
         this.http = http;
         this.auth = Map.of("Authorization", "Bearer " + accessToken);
+        this.language = language;
     }
 
     @Override
@@ -52,7 +59,15 @@ public final class TmdbClient implements Datasource {
 
     @Override
     public List<EpisodeInfo> getSeason(String showId, int season) throws IOException {
-        JsonObject json = http.get(BASE + "/tv/" + showId + "/season/" + season, auth);
+        return getSeason(showId, season, "default", null);
+    }
+
+    @Override
+    public List<EpisodeInfo> getSeason(String showId, int season, String order, String language) throws IOException {
+        String lang = language != null ? language : this.language;
+        String url = BASE + "/tv/" + showId + "/season/" + season
+                + (lang != null && !lang.isBlank() ? "?language=" + encode(lang) : "");
+        JsonObject json = http.get(url, auth);
         List<EpisodeInfo> episodes = new ArrayList<>();
         for (JsonElement e : arr(json, "episodes")) {
             JsonObject o = e.getAsJsonObject();

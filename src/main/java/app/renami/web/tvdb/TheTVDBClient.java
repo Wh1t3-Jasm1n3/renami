@@ -70,6 +70,11 @@ public class TheTVDBClient implements Datasource {
 
     @Override
     public List<EpisodeInfo> getSeason(String showId, int season, String order) throws IOException {
+        return getSeason(showId, season, order, null);
+    }
+
+    @Override
+    public List<EpisodeInfo> getSeason(String showId, int season, String order, String language) throws IOException {
         boolean absolute = "absolute".equalsIgnoreCase(order);
         boolean allSeasons = order == null || order.equals("default");
         String url = absolute
@@ -77,6 +82,9 @@ public class TheTVDBClient implements Datasource {
                 : allSeasons
                 ? BASE + "/series/" + showId + "/episodes/default"
                 : BASE + "/series/" + showId + "/episodes/" + order + "/" + season;
+        if (language != null && !language.isBlank()) {
+            url += "?lang=" + language;
+        }
         JsonObject json = http.get(url, auth());
         List<EpisodeInfo> episodes = new ArrayList<>();
         JsonObject data = json.has("data") && json.get("data").isJsonObject() ? json.getAsJsonObject("data") : new JsonObject();
