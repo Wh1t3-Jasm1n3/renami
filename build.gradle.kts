@@ -14,6 +14,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("org.apache.groovy:groovy:4.0.22")
     implementation("com.formdev:flatlaf:3.7.2")
+    implementation("com.formdev:flatlaf-extras:3.7.2")
 
     testImplementation(platform("org.junit:junit-bom:5.11.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

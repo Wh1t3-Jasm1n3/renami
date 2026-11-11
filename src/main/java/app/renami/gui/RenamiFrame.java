@@ -4,7 +4,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-/** Main application window for the Renami desktop UI. */
+/**
+ * Main application window: a macOS-style source-list sidebar on the left and
+ * one view per sidebar entry in the content area.
+ */
 public final class RenamiFrame extends JFrame {
 
     private final RenamePanel renamePanel = new RenamePanel();
@@ -19,17 +22,24 @@ public final class RenamiFrame extends JFrame {
         setLayout(new BorderLayout());
         AppIcon.applyTo(this);
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Rename", renamePanel);
-        tabs.addTab("Subtitles", new SubtitlesPanel());
-        tabs.addTab("Duplicates", new DupePanel());
-        tabs.addTab("History", new HistoryPanel());
-        add(tabs, BorderLayout.CENTER);
+        JPanel content = new JPanel(new CardLayout());
+        content.add(renamePanel, "rename");
+        content.add(new SubtitlesPanel(), "subtitles");
+        content.add(new DupePanel(), "duplicates");
+        content.add(new HistoryPanel(), "history");
 
-        JLabel footer = new JLabel("  Renami — open-source media renamer. Undo anytime with `renami undo`.");
-        add(footer, BorderLayout.SOUTH);
+        Sidebar sidebar = new Sidebar(
+                List.of(new Sidebar.Item("rename", "Rename", "rename"),
+                        new Sidebar.Item("subtitles", "Subtitles", "subtitles"),
+                        new Sidebar.Item("duplicates", "Duplicates", "duplicates"),
+                        new Sidebar.Item("history", "History", "history")),
+                id -> ((CardLayout) content.getLayout()).show(content, id));
 
-        setSize(900, 600);
+        add(sidebar, BorderLayout.WEST);
+        add(content, BorderLayout.CENTER);
+        getRootPane().setDefaultButton(renamePanel.renameButton());
+
+        setSize(1000, 640);
         setLocationByPlatform(true);
     }
 
@@ -44,7 +54,7 @@ public final class RenamiFrame extends JFrame {
             System.err.println("error: no display available — use the `rename` command instead");
             return 3;
         }
-        GuiTheme.apply();
+        RenamiTheme.apply();
         java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
         SwingUtilities.invokeLater(() -> {
             RenamiFrame frame = new RenamiFrame(preload);
