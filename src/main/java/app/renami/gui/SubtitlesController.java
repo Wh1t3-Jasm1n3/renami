@@ -2,6 +2,8 @@ package app.renami.gui;
 
 import app.renami.media.MediaScanner;
 import app.renami.parse.FileNameParser;
+import app.renami.parse.ReleaseInfo;
+import app.renami.similarity.NameScorer;
 import app.renami.web.opensubtitles.OpenSubtitlesClient;
 import app.renami.web.opensubtitles.OpenSubtitlesClient.Candidate;
 
@@ -29,11 +31,10 @@ public final class SubtitlesController {
     public List<Row> preview(List<Path> files, String lang) throws IOException {
         List<Row> rows = new ArrayList<>();
         for (Path file : files) {
+            ReleaseInfo info = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file));
             Candidate best = bestByHash(file, lang);
             if (best == null) {
-                String query = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file))
-                        .titleGuess();
-                best = best(client.search(query, lang));
+                best = bestByRelevance(client.search(searchQuery(info), lang), info.titleGuess());
             }
             if (best != null) {
                 rows.add(new Row(file, subtitlePath(file, best), best));
@@ -52,6 +53,27 @@ public final class SubtitlesController {
         } catch (Exception e) {
             return null; // hash search is best-effort; query search covers the rest
         }
+    }
+
+    /** FileBot-style search string: title plus SxxEyy for episodes, plus year for movies. */
+    static String searchQuery(ReleaseInfo info) {
+        StringBuilder query = new StringBuilder(info.titleGuess() == null ? "" : info.titleGuess());
+        if (info.hasEpisode()) {
+            query.append(' ').append(info.episode().format());
+        } else if (info.year() > 0) {
+            query.append(' ').append(info.year());
+        }
+        return query.toString().trim();
+    }
+
+    /** Rank query hits by title similarity to the file, download count breaks ties (FileBot parity). */
+    static Candidate bestByRelevance(List<Candidate> candidates, String titleGuess) {
+        String guess = titleGuess == null ? "" : titleGuess;
+        return candidates.stream()
+                .max(Comparator.comparingDouble((Candidate c) ->
+                                NameScorer.scoreRaw(guess, c.title() == null ? "" : c.title()))
+                        .thenComparingInt(Candidate::downloads))
+                .orElse(null);
     }
 
     private static Candidate best(List<Candidate> candidates) {

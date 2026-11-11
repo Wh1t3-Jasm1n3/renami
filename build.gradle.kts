@@ -4,7 +4,6 @@ plugins {
 }
 
 group = "app.renami"
-version = "1.2.0"
 
 repositories {
     mavenCentral()

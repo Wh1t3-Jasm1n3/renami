@@ -93,7 +93,7 @@ public class OpenSubtitlesClient { // non-final: tests substitute a stub transpo
         }
     }
 
-    private static final String UA = "Renami renami-app (https://github.com/renami-app)";
+    private static final String UA = "Renami https://github.com/Wh1t3-Jasm1n3/renami";
 
     private Map<String, String> auth() throws IOException {
         if (token != null) {

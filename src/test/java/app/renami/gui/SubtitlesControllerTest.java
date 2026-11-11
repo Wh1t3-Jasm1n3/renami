@@ -21,6 +21,7 @@ class SubtitlesControllerTest {
     private static final class StubClient extends OpenSubtitlesClient {
         boolean queryCalled;
         boolean hashCalled;
+        String lastQuery;
 
         StubClient() {
             super("stub", new HttpJson(null, false));
@@ -29,7 +30,8 @@ class SubtitlesControllerTest {
         @Override
         public List<Candidate> search(String query, String language) {
             queryCalled = true;
-            if (query.equalsIgnoreCase("Inception")) {
+            lastQuery = query;
+            if (query.equalsIgnoreCase("Inception") || query.equalsIgnoreCase("Inception 2010")) {
                 return List.of(
                         new Candidate(1, language, "Inception 2010 WEBRip", 42, "srt"),
                         new Candidate(2, language, "Inception 2010 BluRay", 108, "srt"));
@@ -99,5 +101,27 @@ class SubtitlesControllerTest {
         new SubtitlesController(client).preview(List.of(video), "en");
         assertEquals(false, client.hashCalled);
         assertTrue(client.queryCalled);
+    }
+
+    @Test
+    void movieQueryCarriesTheYear() throws Exception {
+        Path video = Files.writeString(dir.resolve("Inception.2010.mkv"), "x");
+        StubClient client = new StubClient();
+        new SubtitlesController(client).preview(List.of(video), "en");
+        assertEquals("Inception 2010", client.lastQuery);
+    }
+
+    @Test
+    void episodeQueryCarriesSeasonAndEpisode() {
+        var info = app.renami.parse.FileNameParser.parse("Breaking.Bad.S01E02.1080p.mkv", "mkv");
+        assertEquals("Breaking Bad S01E02", SubtitlesController.searchQuery(info));
+    }
+
+    @Test
+    void closerTitleWinsOverMoreDownloads() {
+        List<OpenSubtitlesClient.Candidate> candidates = List.of(
+                new OpenSubtitlesClient.Candidate(1, "en", "Inception", 1, "srt"),
+                new OpenSubtitlesClient.Candidate(2, "en", "Total Recall", 999, "srt"));
+        assertEquals(1, SubtitlesController.bestByRelevance(candidates, "Inception").id());
     }
 }

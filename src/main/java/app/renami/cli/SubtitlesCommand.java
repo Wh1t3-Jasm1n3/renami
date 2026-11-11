@@ -1,7 +1,7 @@
 package app.renami.cli;
 
 import app.renami.media.MediaScanner;
-import app.renami.parse.FileNameParser;
+import app.renami.gui.SubtitlesController;
 import app.renami.util.Config;
 import app.renami.web.HttpJson;
 import app.renami.web.opensubtitles.OpenSubtitlesClient;
@@ -10,7 +10,6 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -46,21 +45,19 @@ public class SubtitlesCommand implements Callable<Integer> {
             return 1;
         }
 
+        SubtitlesController controller = new SubtitlesController(client);
         int found = 0;
         for (Path file : files) {
-            String query = FileNameParser.parse(file.getFileName().toString(), MediaScanner.extension(file))
-                    .titleGuess();
-            List<OpenSubtitlesClient.Candidate> candidates = client.search(query, lang);
-            OpenSubtitlesClient.Candidate best = candidates.stream()
-                    .max(Comparator.comparingInt(OpenSubtitlesClient.Candidate::downloads))
-                    .orElse(null);
-            if (best == null) {
+            List<SubtitlesController.Row> matches = controller.preview(List.of(file), lang);
+            if (matches.isEmpty()) {
                 System.out.println("[none]   " + file.getFileName());
                 continue;
             }
-            Path target = subtitlePath(file, best);
+            SubtitlesController.Row row = matches.get(0);
+            OpenSubtitlesClient.Candidate best = row.candidate();
+            Path target = row.target();
             if (apply) {
-                client.download(best.id(), target);
+                controller.download(row);
                 System.out.println("[saved]  " + file.getFileName() + "  →  " + target.getFileName()
                         + "  (" + best.language() + ", " + best.downloads() + " downloads)");
             } else {
