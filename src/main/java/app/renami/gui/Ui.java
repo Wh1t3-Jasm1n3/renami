@@ -127,8 +127,32 @@ public final class Ui {
         return label;
     }
 
+    /** View title, matching the Rename view's typography. */
+    public static JLabel header(String title) {
+        JLabel label = new JLabel(title);
+        label.setFont(title(22f));
+        label.setForeground(text());
+        return label;
+    }
+
+    /** Flat, roomy table styling shared by every view. */
+    public static void styleTable(javax.swing.JTable table) {
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setFillsViewportHeight(true);
+        table.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(javax.swing.JTable t, Object value,
+                                                                    boolean sel, boolean focus, int row, int col) {
+                java.awt.Component c = super.getTableCellRendererComponent(t, value, sel, focus, row, col);
+                ((javax.swing.JLabel) c).setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+                return c;
+            }
+        });
+    }
+
     /** Rounded card panel with a hairline border. */
-    public static JPanel card(JPanel contents) {
+    public static JPanel card(JComponent contents) {
         JPanel card = new JPanel(new java.awt.BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {

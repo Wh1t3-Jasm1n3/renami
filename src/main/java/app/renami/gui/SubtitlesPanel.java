@@ -12,10 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/** Subtitle panel: pick a folder, search matches, download on confirm. */
+/** Subtitle view: pick a folder, search matches, download on confirm. */
 public final class SubtitlesPanel extends JPanel {
 
-    private final JTextField inputField = new JTextField(30);
+    private final JTextField inputField = new JTextField(28);
     private final JTextField langField = new JTextField("en", 6);
     private final DefaultTableModel tableModel =
             new DefaultTableModel(new Object[]{"File", "Subtitle", "Language", "Downloads"}, 0) {
@@ -33,31 +33,30 @@ public final class SubtitlesPanel extends JPanel {
     private List<Path> droppedFiles = List.of();
 
     public SubtitlesPanel() {
-        super(new BorderLayout(8, 8));
+        super(new BorderLayout(0, 16));
+        setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        top.add(new JLabel("Input:"));
-        top.add(inputField, "width 350:350:350");
-        JButton browse = new JButton("…");
-        browse.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                inputField.setText(chooser.getSelectedFile().getAbsolutePath());
-            }
-        });
-        top.add(browse);
-        top.add(new JLabel("Language:"));
-        top.add(langField);
-        add(top, BorderLayout.NORTH);
+        add(Ui.header("Subtitles"), BorderLayout.NORTH);
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(Ui.card(buildOptions()), BorderLayout.NORTH);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(BorderFactory.createEmptyBorder());
+        Ui.styleTable(table);
+        body.add(tableScroll, BorderLayout.CENTER);
+        add(body, BorderLayout.CENTER);
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        bottom.add(searchButton);
-        bottom.add(downloadButton);
-        bottom.add(statusLabel);
-        add(bottom, BorderLayout.SOUTH);
+        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        bar.setOpaque(false);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        buttons.setOpaque(false);
+        buttons.add(searchButton);
+        buttons.add(Ui.prominent(downloadButton));
+        bar.add(buttons, BorderLayout.WEST);
+        statusLabel.setForeground(Ui.secondary());
+        bar.add(statusLabel, BorderLayout.CENTER);
+        add(bar, BorderLayout.SOUTH);
 
         searchButton.addActionListener(e -> search());
         downloadButton.addActionListener(e -> download());
@@ -72,6 +71,47 @@ public final class SubtitlesPanel extends JPanel {
                 statusLabel.setText(dropped.size() + " files dropped");
             }
         });
+    }
+
+    /** The primary action, so the frame can make it the default (Return) button. */
+    JButton downloadButton() {
+        return downloadButton;
+    }
+
+    private JComponent buildOptions() {
+        JPanel grid = new JPanel(new GridBagLayout());
+        grid.setOpaque(false);
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(2, 0, 2, 18);
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.NORTHWEST;
+
+        JPanel folder = new JPanel(new BorderLayout(8, 0));
+        folder.setOpaque(false);
+        folder.add(inputField, BorderLayout.CENTER);
+        JButton browse = new JButton("Choose…");
+        browse.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                inputField.setText(chooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+        folder.add(browse, BorderLayout.EAST);
+
+        c.gridx = 0; c.weightx = 1;
+        grid.add(field("Folder", folder), c);
+        c.gridx = 1; c.weightx = 0; c.insets = new Insets(2, 0, 2, 0);
+        grid.add(field("Language", langField), c);
+        return grid;
+    }
+
+    private static JComponent field(String caption, JComponent control) {
+        JPanel field = new JPanel(new BorderLayout(0, 4));
+        field.setOpaque(false);
+        field.add(Ui.caption(caption), BorderLayout.NORTH);
+        field.add(control, BorderLayout.CENTER);
+        return field;
     }
 
     private OpenSubtitlesClient createClient() {

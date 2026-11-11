@@ -10,10 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/** Duplicate finder panel: scan a folder, show duplicate groups side by side. */
+/** Duplicate finder view: scan a folder, show duplicate groups side by side. */
 public final class DupePanel extends JPanel {
 
-    private final JTextField inputField = new JTextField(30);
+    private final JTextField inputField = new JTextField(28);
     private final DefaultTableModel tableModel =
             new DefaultTableModel(new Object[]{"Group", "File", "Size"}, 0) {
                 @Override
@@ -26,28 +26,29 @@ public final class DupePanel extends JPanel {
     private final JLabel statusLabel = new JLabel(" ");
 
     public DupePanel() {
-        super(new BorderLayout(8, 8));
+        super(new BorderLayout(0, 16));
+        setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        top.add(new JLabel("Folder:"));
-        top.add(inputField, "width 350:350:350");
-        JButton browse = new JButton("…");
-        browse.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                inputField.setText(chooser.getSelectedFile().getAbsolutePath());
-            }
-        });
-        top.add(browse);
-        add(top, BorderLayout.NORTH);
+        add(Ui.header("Duplicates"), BorderLayout.NORTH);
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(Ui.card(buildOptions()), BorderLayout.NORTH);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(BorderFactory.createEmptyBorder());
+        Ui.styleTable(table);
+        body.add(tableScroll, BorderLayout.CENTER);
+        add(body, BorderLayout.CENTER);
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        bottom.add(findButton);
-        bottom.add(statusLabel);
-        add(bottom, BorderLayout.SOUTH);
+        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        bar.setOpaque(false);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        buttons.setOpaque(false);
+        buttons.add(Ui.prominent(findButton));
+        bar.add(buttons, BorderLayout.WEST);
+        statusLabel.setForeground(Ui.secondary());
+        bar.add(statusLabel, BorderLayout.CENTER);
+        add(bar, BorderLayout.SOUTH);
 
         findButton.addActionListener(e -> find());
         FileDrop.register(this, dropped -> {
@@ -58,6 +59,39 @@ public final class DupePanel extends JPanel {
                 statusLabel.setText("drop a folder to scan for duplicates");
             }
         });
+    }
+
+    /** The primary action, so the frame can make it the default (Return) button. */
+    JButton findButton() {
+        return findButton;
+    }
+
+    private JComponent buildOptions() {
+        JPanel folder = new JPanel(new BorderLayout(8, 0));
+        folder.setOpaque(false);
+        folder.add(inputField, BorderLayout.CENTER);
+        JButton browse = new JButton("Choose…");
+        browse.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                inputField.setText(chooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+        folder.add(browse, BorderLayout.EAST);
+
+        JPanel field = new JPanel(new BorderLayout(0, 4));
+        field.setOpaque(false);
+        field.add(Ui.caption("Folder"), BorderLayout.NORTH);
+        field.add(folder, BorderLayout.CENTER);
+
+        JPanel grid = new JPanel(new GridBagLayout());
+        grid.setOpaque(false);
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        grid.add(field, c);
+        return grid;
     }
 
     private void find() {

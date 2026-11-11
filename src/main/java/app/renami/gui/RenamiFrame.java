@@ -11,6 +11,9 @@ import java.util.List;
 public final class RenamiFrame extends JFrame {
 
     private final RenamePanel renamePanel = new RenamePanel();
+    private final SubtitlesPanel subtitlesPanel = new SubtitlesPanel();
+    private final DupePanel dupePanel = new DupePanel();
+    private final HistoryPanel historyPanel = new HistoryPanel();
 
     public RenamiFrame() {
         this(List.of());
@@ -24,16 +27,26 @@ public final class RenamiFrame extends JFrame {
 
         JPanel content = new JPanel(new CardLayout());
         content.add(renamePanel, "rename");
-        content.add(new SubtitlesPanel(), "subtitles");
-        content.add(new DupePanel(), "duplicates");
-        content.add(new HistoryPanel(), "history");
+        content.add(subtitlesPanel, "subtitles");
+        content.add(dupePanel, "duplicates");
+        content.add(historyPanel, "history");
+
+        // each view's primary action becomes the Return-key default button
+        java.util.Map<String, JButton> primary = java.util.Map.of(
+                "rename", renamePanel.renameButton(),
+                "subtitles", subtitlesPanel.downloadButton(),
+                "duplicates", dupePanel.findButton(),
+                "history", historyPanel.undoButton());
 
         Sidebar sidebar = new Sidebar(
                 List.of(new Sidebar.Item("rename", "Rename", "rename"),
                         new Sidebar.Item("subtitles", "Subtitles", "subtitles"),
                         new Sidebar.Item("duplicates", "Duplicates", "duplicates"),
                         new Sidebar.Item("history", "History", "history")),
-                id -> ((CardLayout) content.getLayout()).show(content, id));
+                id -> {
+                    ((CardLayout) content.getLayout()).show(content, id);
+                    getRootPane().setDefaultButton(primary.get(id));
+                });
 
         add(sidebar, BorderLayout.WEST);
         add(content, BorderLayout.CENTER);

@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** History panel: browse rename batches from the journal and undo any of them. */
+/** History view: browse rename batches from the journal and undo any of them. */
 public final class HistoryPanel extends JPanel {
 
     private static final DateTimeFormatter TIME =
@@ -30,18 +30,35 @@ public final class HistoryPanel extends JPanel {
     private final HistoryController controller = new HistoryController(new HistoryStore());
 
     public HistoryPanel() {
-        super(new BorderLayout(8, 8));
+        super(new BorderLayout(0, 16));
+        setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
-                new JScrollPane(batchTable), new JScrollPane(opTable));
+        add(Ui.header("History"), BorderLayout.NORTH);
+
+        JScrollPane batchScroll = new JScrollPane(batchTable);
+        batchScroll.setBorder(BorderFactory.createEmptyBorder());
+        Ui.styleTable(batchTable);
+        batchTable.getColumnModel().getColumn(3).setCellRenderer(new BatchStatusRenderer());
+        JScrollPane opScroll = new JScrollPane(opTable);
+        opScroll.setBorder(BorderFactory.createEmptyBorder());
+        Ui.styleTable(opTable);
+
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, batchScroll, opScroll);
         split.setResizeWeight(0.6);
+        split.setDividerSize(8);
+        split.setBorder(BorderFactory.createEmptyBorder());
         add(split, BorderLayout.CENTER);
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        bottom.add(refreshButton);
-        bottom.add(undoButton);
-        bottom.add(statusLabel);
-        add(bottom, BorderLayout.SOUTH);
+        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        bar.setOpaque(false);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        buttons.setOpaque(false);
+        buttons.add(refreshButton);
+        buttons.add(Ui.prominent(undoButton));
+        bar.add(buttons, BorderLayout.WEST);
+        statusLabel.setForeground(Ui.secondary());
+        bar.add(statusLabel, BorderLayout.CENTER);
+        add(bar, BorderLayout.SOUTH);
 
         refreshButton.addActionListener(e -> refresh());
         undoButton.addActionListener(e -> undoSelected());
@@ -49,6 +66,11 @@ public final class HistoryPanel extends JPanel {
         undoButton.setEnabled(false);
 
         refresh();
+    }
+
+    /** The primary action, so the frame can make it the default (Return) button. */
+    JButton undoButton() {
+        return undoButton;
     }
 
     private void refresh() {
@@ -135,6 +157,21 @@ public final class HistoryPanel extends JPanel {
                 .map(e -> e.getValue() + " " + e.getKey())
                 .reduce((a, b) -> a + ", " + b)
                 .orElse("");
+    }
+
+    /** Status column: green for active batches, muted for undone ones. */
+    private static final class BatchStatusRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (!isSelected) {
+                c.setForeground("active".equals(value)
+                        ? new Color(0x30, 0xB0, 0x60)
+                        : Ui.secondary());
+            }
+            return c;
+        }
     }
 
     private static DefaultTableModel readOnlyModel(Object[] columns) {
