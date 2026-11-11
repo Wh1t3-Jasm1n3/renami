@@ -26,7 +26,8 @@ candidates with a fuzzy-matching engine, and rename/move them using expression t
   `Movie.jpg`) follow the media file through rename/move/copy/link; `--no-companion` opts out
 - 👀 **Folder watch** — `renami watch ~/Downloads --apply` processes files as soon as their
   size stops changing (finished downloads), through the same pipeline as `rename`
-- 🖥 **Desktop UI** — `renami gui` (Swing rename panel); bare `renami` opens it too
+- 🖥 **Desktop UI** — `renami gui` (Swing rename panel, dark mode follows the macOS
+  appearance); bare `renami` opens it too; tabs for Subtitles, Duplicates and History
 - 📦 **Archives** — list/extract zip/tar/7z via native tools; `post-process` renames
   contents directly and can `--clean` processed archives
 - ✅ **Checksums** — write/verify SFV, `md5sum`-style, SHA-1/SHA-256, CRC32 sidecars
@@ -91,7 +92,8 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 1.0 | jpackage `.app` + generated icon, anime datasource (Kitsu) and TheXEM mappings, subtitle hash matching | ✅ |
 | 1.1 | `--action rename/move/copy/hardlink/symlink` transfer modes with verb-aware undo | ✅ |
 | 1.2 | companion-file import, folder watch (`renami watch`) | ✅ |
-| 1.3 | GUI history view, dark theme, subtitle search parity | 🔜 |
+| 1.3 | GUI history view, dark theme, subtitle search parity | ✅ |
+| 1.4 | GUI-first: Post-Process, Watch and Checksum tabs in the desktop app | 🔜 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
