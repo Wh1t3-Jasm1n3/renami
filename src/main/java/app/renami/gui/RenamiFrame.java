@@ -15,6 +15,7 @@ public final class RenamiFrame extends JFrame {
     private final WatchPanel watchPanel = new WatchPanel();
     private final SubtitlesPanel subtitlesPanel = new SubtitlesPanel();
     private final DupePanel dupePanel = new DupePanel();
+    private final ChecksumPanel checksumPanel = new ChecksumPanel();
     private final HistoryPanel historyPanel = new HistoryPanel();
 
     public RenamiFrame() {
@@ -33,6 +34,7 @@ public final class RenamiFrame extends JFrame {
         content.add(watchPanel, "watch");
         content.add(subtitlesPanel, "subtitles");
         content.add(dupePanel, "duplicates");
+        content.add(checksumPanel, "checksum");
         content.add(historyPanel, "history");
 
         // each view's primary action becomes the Return-key default button
@@ -42,6 +44,7 @@ public final class RenamiFrame extends JFrame {
                 "watch", watchPanel.startButton(),
                 "subtitles", subtitlesPanel.downloadButton(),
                 "duplicates", dupePanel.findButton(),
+                "checksum", checksumPanel.generateButton(),
                 "history", historyPanel.undoButton());
 
         Sidebar sidebar = new Sidebar(
@@ -50,6 +53,7 @@ public final class RenamiFrame extends JFrame {
                         new Sidebar.Item("watch", "Watch", "watch"),
                         new Sidebar.Item("subtitles", "Subtitles", "subtitles"),
                         new Sidebar.Item("duplicates", "Duplicates", "duplicates"),
+                        new Sidebar.Item("checksum", "Checksum", "checksum"),
                         new Sidebar.Item("history", "History", "history")),
                 id -> {
                     ((CardLayout) content.getLayout()).show(content, id);

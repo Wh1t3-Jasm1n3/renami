@@ -161,7 +161,7 @@ public final class Ui {
                 if (!isSelected) {
                     String status = String.valueOf(value);
                     c.setForeground(switch (status) {
-                        case "rename", "applied", "planned" -> new Color(0x30, 0xB0, 0x60);
+                        case "rename", "applied", "planned", "ok" -> new Color(0x30, 0xB0, 0x60);
                         case "unchanged" -> Ui.secondary();
                         default -> new Color(0xE0, 0x4A, 0x4A);
                     });
