@@ -14,9 +14,9 @@ expression templates. Undo anything, anytime.
 
 Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
 
-- **Renami-1.4.0-macos.zip** — native macOS app with bundled Java runtime. Unsigned, so first
+- **Renami-1.5.0-macos.zip** — native macOS app with bundled Java runtime. Unsigned, so first
   launch: right-click → Open.
-- **renami-1.4.0-cli.zip** — command line (requires JDK 21+), or build from source below.
+- **renami-1.5.0-cli.zip** — command line (requires JDK 21+), or build from source below.
 
 ## The desktop app
 
@@ -25,7 +25,7 @@ mode that follows the desktop, drag & drop everywhere, and one sidebar with six 
 
 | View | What it does |
 |---|---|
-| **Rename** | Drop files or a folder → **Match** against TMDb/TVDB/OMDb/Kitsu → preview → **Rename**. Mode (auto/movie/episode/local), transfer action, format template, companions. |
+| **Rename** | FileBot's proven layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVDB/OMDb/Kitsu → edit names (double-click, Load Names, Edit Format with live preview, F1–F12 presets) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
 | **Post-Process** | The one-shot FileBot flow: pick a folder, archives are extracted automatically, everything is matched and moved into a structured output tree (`{n}/Season {s}/…`). Optionally delete processed archives. |
 | **Watch** | Pick a folder and press Start — new files are processed the moment their download settles. Live activity log. |
 | **Subtitles** | Search OpenSubtitles for every media file in a folder and download matches next to them. |
@@ -117,6 +117,7 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 1.2 | companion-file import, folder watch (`renami watch`) | ✅ |
 | 1.3 | GUI history view, dark theme, subtitle search parity | ✅ |
 | 1.4 | 2026-macOS redesign (sidebar chrome, SF Pro, accent, dark mode) + GUI-first Post-Process, Watch and Checksum views | ✅ |
+| 1.5 | FileBot-parity Rename view: Original Files / New Names dual panels, per-list tool strips, center Match/Rename column, Edit Format dialog, presets | ✅ |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
