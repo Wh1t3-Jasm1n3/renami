@@ -39,4 +39,14 @@ class TransferActionTest {
         assertEquals("hardlinked", TransferAction.HARDLINK.verb());
         assertEquals("symlinked", TransferAction.SYMLINK.verb());
     }
+
+    @Test
+    void journaledVerbsMapBackToSourceConsumption() {
+        assertTrue(TransferAction.consumesSource("renamed"));
+        assertTrue(TransferAction.consumesSource("moved"));
+        assertFalse(TransferAction.consumesSource("copied"));
+        assertFalse(TransferAction.consumesSource("hardlinked"));
+        assertFalse(TransferAction.consumesSource("symlinked"));
+        assertTrue(TransferAction.consumesSource("something-future"), "unknown verbs must move files back");
+    }
 }

@@ -39,6 +39,16 @@ public enum TransferAction {
         return consumesSource;
     }
 
+    /** True when a journaled verb consumed the source, so undo must move the file back. */
+    public static boolean consumesSource(String verb) {
+        for (TransferAction action : values()) {
+            if (action.verb.equals(verb)) {
+                return action.consumesSource;
+            }
+        }
+        return true; // journals predating 1.1 carry no verb; those batches were renames
+    }
+
     public static TransferAction parse(String value) {
         try {
             return valueOf(value.trim().toUpperCase(Locale.ROOT));

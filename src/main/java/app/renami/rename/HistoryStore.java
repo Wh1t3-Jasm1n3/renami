@@ -60,32 +60,38 @@ public final class HistoryStore {
 
     /** @return the most recent batch that has not been undone yet (latest record per id wins) */
     public Optional<Batch> lastActiveBatch() throws IOException {
+        return batches().stream().filter(b -> !b.undone()).findFirst();
+    }
+
+    /** All batches, newest first; the latest record per id wins (undone flag included). */
+    public List<Batch> batches() throws IOException {
         if (!Files.isRegularFile(file)) {
-            return Optional.empty();
+            return List.of();
         }
         List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
         Set<String> seen = new HashSet<>();
+        List<Batch> result = new ArrayList<>();
         for (int i = lines.size() - 1; i >= 0; i--) {
             String line = lines.get(i).trim();
             if (line.isEmpty()) {
                 continue;
             }
             JsonObject o = JsonParser.parseString(line).getAsJsonObject();
-            String id = o.get("id").getAsString();
-            if (!seen.add(id)) {
-                continue; // a newer record for this batch was already processed
-            }
-            if (!o.get("undone").getAsBoolean()) {
-                List<String[]> ops = new ArrayList<>();
-                o.getAsJsonArray("ops").forEach(e -> {
-                    var arr = e.getAsJsonArray();
-                    String verb = arr.size() > 2 ? arr.get(2).getAsString() : "renamed";
-                    ops.add(new String[]{arr.get(0).getAsString(), arr.get(1).getAsString(), verb});
-                });
-                return Optional.of(new Batch(id, o.get("time").getAsLong(), false, ops));
+            if (seen.add(o.get("id").getAsString())) {
+                result.add(toBatch(o));
             }
         }
-        return Optional.empty();
+        return result;
+    }
+
+    private static Batch toBatch(JsonObject o) {
+        List<String[]> ops = new ArrayList<>();
+        o.getAsJsonArray("ops").forEach(e -> {
+            var arr = e.getAsJsonArray();
+            String verb = arr.size() > 2 ? arr.get(2).getAsString() : "renamed";
+            ops.add(new String[]{arr.get(0).getAsString(), arr.get(1).getAsString(), verb});
+        });
+        return new Batch(o.get("id").getAsString(), o.get("time").getAsLong(), o.get("undone").getAsBoolean(), ops);
     }
 
     /** Marks a batch as undone by appending a copy with undone=true (last record per id wins). */
