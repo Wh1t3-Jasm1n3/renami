@@ -53,7 +53,7 @@ public final class RenamePanel extends JPanel {
     private final SegmentedControl conflictControl =
             new SegmentedControl("fail", "skip", "overwrite", "index");
     private final JComboBox<String> dbBox =
-            new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "omdb", "kitsu", "local"});
+            new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "tvmaze", "omdb", "kitsu", "local"});
     private final JSpinner minScoreSpinner =
             new JSpinner(new SpinnerNumberModel(0.60, 0.0, 1.0, 0.05));
     private final JCheckBox companionCheck = new JCheckBox("Rename companion files", true);
@@ -874,7 +874,7 @@ public final class RenamePanel extends JPanel {
     private JPopupMenu buildFetchPopup() {
         JPopupMenu menu = new JPopupMenu();
         menu.add(groupLabel("Episode Mode"));
-        for (String db : List.of("tvdb", "tmdb")) {
+        for (String db : List.of("tvdb", "tmdb", "tvmaze", "kitsu")) {
             menu.add(item("  " + db, () -> {
                 dbBox.setSelectedItem(db);
                 modeControl.setSelected("episode");

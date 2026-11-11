@@ -26,11 +26,22 @@ public class TheTVDBClient implements Datasource {
 
     private final HttpJson http;
     private final String apiKey;
+    private final String userPin; // TVDB subscriber PIN for user-supported project keys (optional)
     private String token;
     app.renami.web.xem.XemClient xem; // package-visible: tests substitute a stub
 
     public TheTVDBClient(String apiKey, HttpJson http) {
+        this(apiKey, null, http);
+    }
+
+    /**
+     * TheTVDB hands out project keys only. A personal user gets one under the
+     * "end-user subscriptions" model, which then requires their subscriber PIN
+     * ({@code tvdb.user.pin}) on every login.
+     */
+    public TheTVDBClient(String apiKey, String userPin, HttpJson http) {
         this.apiKey = apiKey;
+        this.userPin = userPin;
         this.http = http;
         this.xem = new app.renami.web.xem.XemClient(http);
     }
@@ -42,10 +53,14 @@ public class TheTVDBClient implements Datasource {
 
     private Map<String, String> auth() throws IOException {
         if (token == null) {
-            JsonObject response = http.post(BASE + "/login",
-                    "{\"apikey\": \"" + apiKey + "\"}", Map.of());
+            String body = userPin == null
+                    ? "{\"apikey\": \"" + apiKey + "\"}"
+                    : "{\"apikey\": \"" + apiKey + "\", \"userkey\": \"" + userPin + "\"}";
+            JsonObject response = http.post(BASE + "/login", body, Map.of());
             if (!response.has("token")) {
-                throw new IOException("TheTVDB login failed — check your API key");
+                throw new IOException("TheTVDB login failed — check your API key"
+                        + (userPin == null ? " (this project key may also need your subscriber PIN "
+                        + "as tvdb.user.pin)" : " and subscriber PIN"));
             }
             token = response.get("token").getAsString();
         }

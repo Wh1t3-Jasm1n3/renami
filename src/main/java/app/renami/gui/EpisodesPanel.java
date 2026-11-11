@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 final class EpisodesPanel extends JPanel {
 
-    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"tvdb", "tmdb"});
+    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "tvmaze", "kitsu"});
     private final JComboBox<String> orderBox = new JComboBox<>(new String[]{"default", "aired", "dvd", "absolute"});
     private final JComboBox<String> langBox = new JComboBox<>(
             new String[]{"en", "de", "es", "fr", "it", "ja", "ko", "nl", "pl", "pt", "ru", "sv", "tr", "zh"});

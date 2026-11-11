@@ -23,17 +23,19 @@ Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/
 ## The desktop app
 
 `Renami.app` is a native-feeling macOS app: SF Pro typography, the system accent colour, light/dark
-mode that follows the desktop, drag & drop everywhere, and one sidebar with six views:
+mode that follows the desktop, drag & drop everywhere, and one sidebar with FileBot's views:
 
 | View | What it does |
 |---|---|
-| **Rename** | FileBot's proven layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVDB/OMDb/Kitsu → edit names (double-click, Load Names, Edit Format with live preview, F1–F12 presets) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
-| **Post-Process** | The one-shot FileBot flow: pick a folder, archives are extracted automatically, everything is matched and moved into a structured output tree (`{n}/Season {s}/…`). Optionally delete processed archives. |
-| **Watch** | Pick a folder and press Start — new files are processed the moment their download settles. Live activity log. |
+| **Rename** | FileBot's proven layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVDB/TVmaze/OMDb/Kitsu (TVmaze needs no key) → edit names (double-click, Load Names, Edit Format with live preview, F1–F12 presets) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
+| **Episodes** | Pick a show and season, get the episode list from the datasource, and rename downloaded episodes against it. |
 | **Subtitles** | Search OpenSubtitles for every media file in a folder and download matches next to them. |
-| **Duplicates** | 3-phase dupe finder (size → partial hash → full SHA-256) with groups side by side. |
+| **Filter** | Regex/glob file filter with live preview — the same engine as `renami filter`. |
 | **Checksum** | Generate SHA-256/SHA-1/MD5/eD2K/CRC32 hashes, save SFV/MD5-style sidecars, verify with OK/MISMATCH/MISSING at a glance. |
 | **History** | Every batch is journalled — browse it and **Undo** any batch, even copies and links (those get deleted). |
+| **Post-Process** | The one-shot FileBot flow: pick a folder, archives are extracted automatically, everything is matched and moved into a structured output tree (`{n}/Season {s}/…`). Optionally delete processed archives. |
+| **Watch** | Pick a folder and press Start — new files are processed the moment their download settles. Live activity log. |
+| **Duplicates** | 3-phase dupe finder (size → partial hash → full SHA-256) with groups side by side. |
 
 Every view follows the same rhythm: options in a card, a flat preview table with color-coded
 status, one prominent action. Return always triggers the view's primary action.
@@ -63,13 +65,34 @@ $BIN undo
 $BIN gui                           # open the desktop app from the terminal
 ```
 
-No API key? Anime works out of the box with `--db kitsu` (Kitsu needs no credentials), and
-everything still works offline with `--db local` (rename purely from filename facts) —
-and `--help` on any command documents its options.
+No API key? **TV shows work out of the box** — `--db auto` tries the keyed providers you
+configured and then falls back to the key-free ones: **TVmaze** (TV shows and episodes,
+no credentials at all) and **Kitsu** (anime). Everything still works offline with
+`--db local` (rename purely from filename facts) — and `--help` on any command
+documents its options.
 
 Configuration is read from `~/.renami/config.properties` or `RENAMI_*` environment
 variables: `RENAMI_TMDB_API_KEY`, `RENAMI_TVDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
 `RENAMI_OPENSUBTITLES_API_KEY`, `RENAMI_ACOUSTID_API_KEY`.
+
+## Datasources and API keys
+
+Renami is built so that **a fresh install needs no key at all** for TV. The GUI's
+*Help ▸ API Keys…* panel lists every service with a **Get key…** button (opens the
+sign-up page) and a **Test** button (validates the key with a live lookup).
+
+| Service | Key? | Cost for personal use | Covers |
+|---|---|---|---|
+| **TVmaze** | none | free | TV shows + episodes (no movie API) |
+| **Kitsu** | none | free | anime, AniDB-derived data |
+| **TMDb** | free, instant | free for personal use | movies **and** TV — the one key worth adding |
+| **OMDb** | free, by email | free, 1 000 lookups/day | IMDb data |
+| **TheTVDB** | project key only | effectively paid: each user needs a TVDB subscription + PIN (`tvdb.user.pin`) | TV shows |
+| **OpenSubtitles** | free account | free | the Subtitles view only |
+
+`--db auto` consults the keyed providers you configured first, then TVmaze, then Kitsu —
+it never fails just because a key is missing. Movies still want one free TMDb (or OMDb)
+key, because TVmaze has no public movie endpoint.
 
 ## Engine features
 
@@ -77,7 +100,9 @@ variables: `RENAMI_TMDB_API_KEY`, `RENAMI_TVDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
 - 🔍 **Filename parsing** — `S01E02`, `1x02`, `102`, anime absolute `Show - 05` patterns,
   year, quality-token stripping
 - 📡 **Metadata lookup** — TMDb, TheTVDB v4 (incl. aired/dvd/absolute episode orders),
-  OMDb, Kitsu (anime, **no API key needed**), plus an offline `local` datasource;
+  OMDb, TVmaze (**no API key needed**), Kitsu (anime, **no API key needed**), plus an
+  offline `local` datasource; `--db auto` chains keyed providers first, then the
+  key-free ones, so a fresh install resolves TV with zero configuration;
   24 h HTTP response cache
 - 🧠 **Fuzzy matching** — normalized Levenshtein + token-overlap scoring
 - 📝 **Format engine** — Groovy-backed `{expressions}` (e.g. `{n} - {s00e00} - {t}`),
@@ -120,6 +145,7 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 1.3 | GUI history view, dark theme, subtitle search parity | ✅ |
 | 1.4 | 2026-macOS redesign (sidebar chrome, SF Pro, accent, dark mode) + GUI-first Post-Process, Watch and Checksum views | ✅ |
 | 1.5 | FileBot-parity Rename view: Original Files / New Names dual panels, per-list tool strips, center Match/Rename column, Edit Format dialog, presets | ✅ |
+| 1.6 | Key-free datasources (TVmaze + auto fallback chain), FileBot-style API-key panel with Get key/Test, first-run setup | 🚧 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 

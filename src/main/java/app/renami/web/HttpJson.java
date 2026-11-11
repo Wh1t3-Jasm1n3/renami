@@ -1,5 +1,6 @@
 package app.renami.web;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -38,11 +39,16 @@ public final class HttpJson implements JsonGet {
     }
 
     public JsonObject get(String url, Map<String, String> headers) throws IOException {
+        return getTree(url, headers).getAsJsonObject();
+    }
+
+    @Override
+    public JsonElement getTree(String url, Map<String, String> headers) throws IOException {
         Path entry = cacheEntry(url, headers);
         if (useCache && entry != null && Files.isRegularFile(entry)
                 && Files.getLastModifiedTime(entry).toInstant().isAfter(Instant.now().minus(TTL))) {
             try {
-                return JsonParser.parseString(Files.readString(entry)).getAsJsonObject();
+                return JsonParser.parseString(Files.readString(entry));
             } catch (RuntimeException ignored) {
                 // corrupt cache entry — refetch from network
             }
@@ -55,7 +61,7 @@ public final class HttpJson implements JsonGet {
         }
         headers.forEach(builder::header);
         String body = send(builder.build());
-        JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+        JsonElement json = JsonParser.parseString(body);
         if (useCache && entry != null) {
             Files.createDirectories(entry.getParent());
             Files.writeString(entry, body);

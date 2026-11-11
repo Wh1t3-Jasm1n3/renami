@@ -62,4 +62,27 @@ public final class Config {
             System.err.println("warning: cannot write " + file + ": " + e.getMessage());
         }
     }
+
+    /** Remove a persisted key (the API-key panel uses this when a field is cleared). */
+    public static synchronized void unset(String key) {
+        Path file = dataDir().resolve("config.properties");
+        if (!Files.isRegularFile(file)) {
+            return;
+        }
+        Properties p = new Properties();
+        try (InputStream in = Files.newInputStream(file)) {
+            p.load(in);
+        } catch (IOException e) {
+            System.err.println("warning: cannot read " + file + ": " + e.getMessage());
+            return;
+        }
+        if (p.remove(key) == null) {
+            return;
+        }
+        try (var out = Files.newOutputStream(file)) {
+            p.store(out, "renami");
+        } catch (IOException e) {
+            System.err.println("warning: cannot write " + file + ": " + e.getMessage());
+        }
+    }
 }

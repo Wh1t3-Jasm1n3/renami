@@ -175,6 +175,8 @@ Legend: ✅ present · 🆕 added in this pass · 🔶 simplified equivalent · 
 | Fetch Data popup (datasource + Edit Format + Preferences) | ✅ | `buildFetchPopup` |
 | Load Names: Directory Index / Text File / Clipboard | 🆕 | Directory Index added |
 | Settings popup (extension, action, post-process) | 🔶 | action + conflict + companions; no post-process grid (separate Post-Process view) |
+| Preferences ▸ API keys (per-service key fields + validation) | ✅ | Help ▸ **API Keys…** panel: one row per service with **Get key…** (opens sign-up) and live **Test**; key-free services (TVmaze, Kitsu, Local) marked "no key needed"; TVDB carries its subscriber-PIN field |
+| First-run guidance | 🆕 | "Welcome to Renami" dialog when no key is configured: add free TMDb key or continue key-free |
 | Edit popup: Edit Format / Edit Match / Edit Name / Inspect | 🆕 | Edit Match added (`editMatch` + candidate picker) |
 | Match details panel (F6/Space) | ⛔ | later milestone; Inspect dialog covers it |
 | Keys Ctrl+N / Ctrl+M / Ctrl+O / Ctrl+L | 🆕 | all four wired |
@@ -183,7 +185,7 @@ Legend: ✅ present · 🆕 added in this pass · 🔶 simplified equivalent · 
 
 | FileBot control | Status | Renami |
 |---|---|---|
-| Datasource select | ✅ | Source combo (tvdb/tmdb) |
+| Datasource select | ✅ | Source combo (auto/tmdb/tvdb/tvmaze/kitsu) |
 | Search + Find | ✅ | Search field + button, Enter submits |
 | Season spinner | ✅ | spinner |
 | Order combo (aired/dvd/absolute) | 🆕 | wired to `getSeason(id,season,order,language)` |

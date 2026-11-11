@@ -114,6 +114,10 @@ public final class RenamiFrame extends JFrame {
     private void installMenuBar() {
         JMenuBar bar = new JMenuBar();
         JMenu help = new JMenu("Help");
+        JMenuItem keys = new JMenuItem("API Keys…");
+        keys.addActionListener(e -> ApiKeysDialog.show(this));
+        help.add(keys);
+        help.addSeparator();
         help.add(menuLink("Getting Started", "https://github.com/Wh1t3-Jasm1n3/renami"));
         help.add(menuLink("FAQ", "https://github.com/Wh1t3-Jasm1n3/renami#faq"));
         help.add(menuLink("Report Bugs", "https://github.com/Wh1t3-Jasm1n3/renami/issues"));
@@ -180,6 +184,7 @@ public final class RenamiFrame extends JFrame {
                 }
             });
             frame.setVisible(true);
+            ApiKeysDialog.setupIfUnconfigured(frame);
         });
         try {
             latch.await();
