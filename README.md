@@ -1,3 +1,5 @@
+<img src="docs/app-icon.png" alt="Renami app icon" width="128" align="left" hspace="16" />
+
 # Renami
 
 **Renami** is an open-source media file renamer and organizer for macOS — a clean-room

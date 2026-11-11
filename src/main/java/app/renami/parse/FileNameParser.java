@@ -24,10 +24,10 @@ public final class FileNameParser {
 
     /** Tokens that describe encoding/source, never part of the title. */
     private static final Pattern QUALITY_PATTERN = Pattern.compile(
-            "(?i)\\b(?:720p|1080p|2160p|4k|uhd|hd|sd|x264|x265|h264|h265|hevc|av1|"
-                    + "hdr10\\+?|hdr|10bit|8bit|web-?dl|webrip|web|bluray|bdrip|brrip|hdtv|dvdrip|"
-                    + "aac|ac3|eac3|dts(?:-hd)?|dd5\\.1|5\\.1|7\\.1|atmos|multi|proper|repack|"
-                    + "internal|limited|extended|unrated|imax)\\b");
+            "(?i)\\b(?:720p|1080p|2160p|4k|uhd|hd|sd|x264|x265|h264|h265|h[ .]26[45]|hevc|av1|"
+                    + "hdr10\\+?|hdr|10bit|8bit|web-?dl|webrip|bluray|bdrip|brrip|hdtv|dvdrip|"
+                    + "xvid|divx|remux|aac|ac3|eac3|dts(?:-hd)?|dd5\\.1|5\\.1|7\\.1|atmos|multi|proper|repack|"
+                    + "internal|limited|extended|extcut|unrated|imax)\\b");
 
     private FileNameParser() {
     }
@@ -43,10 +43,20 @@ public final class FileNameParser {
 
     public static Optional<Integer> parseYear(String text) {
         Matcher m = YEAR_PATTERN.matcher(text);
-        if (m.find()) {
-            return Optional.of(Integer.parseInt(m.group()));
+        Integer first = null;
+        while (m.find()) {
+            // a year in parentheses is the release year; a bare one may be part of
+            // the title ("Blade Runner 2049 (2017)" → 2017, not 2049)
+            boolean inParens = m.start() > 0 && m.end() < text.length()
+                    && text.charAt(m.start() - 1) == '(' && text.charAt(m.end()) == ')';
+            if (inParens) {
+                return Optional.of(Integer.parseInt(m.group()));
+            }
+            if (first == null) {
+                first = Integer.parseInt(m.group());
+            }
         }
-        return Optional.empty();
+        return Optional.ofNullable(first);
     }
 
     public static Optional<EpisodeNumber> parseEpisode(String text) {
@@ -64,9 +74,12 @@ public final class FileNameParser {
     /**
      * Bare 3-digit pattern (e.g. {@code "The Office 102.mp4"} → S01E02).
      * Only applied when no stronger pattern matched and the digits are not the year.
+     * The number must end the cleaned name: mid-name 3-digit runs are release noise
+     * ("… HDR H 265-BYNDR" is h265, not S02E65).
      */
     public static Optional<EpisodeNumber> parseLooseEpisode(String text, int year) {
-        Matcher m = THREEDIGIT_PATTERN.matcher(text);
+        String cleaned = text.trim();
+        Matcher m = THREEDIGIT_PATTERN.matcher(cleaned);
         while (m.find()) {
             int season = Integer.parseInt(m.group(1));
             int episode = Integer.parseInt(m.group(2));
@@ -74,7 +87,9 @@ public final class FileNameParser {
             if (asNumber == year || episode == 0 || season == 0 || episode > 99) {
                 continue;
             }
-            return Optional.of(new EpisodeNumber(season, episode));
+            if (m.end() == cleaned.length()) {
+                return Optional.of(new EpisodeNumber(season, episode));
+            }
         }
         return Optional.empty();
     }
@@ -122,14 +137,28 @@ public final class FileNameParser {
             }
         }
 
-        title = stripQualityTokens(title);
+        // scene convention: everything from the first quality token on is noise,
+        // including the release group ("x264-GRP", "x264.grp", "DTS-HD MA 5.1 …")
+        Matcher q = QUALITY_PATTERN.matcher(title);
+        if (q.find()) {
+            title = title.substring(0, q.start());
+        }
         if (year > 0) {
             title = title.replaceAll("\\b" + year + "\\b", " ");
         }
-        // release group tags like "[GRP]" or trailing "- GRP"
+        // release group tags like "[GRP]", and "( )" left behind by year removal
         title = title.replaceAll("[\\[\\(][^\\]\\)]*[\\]\\)]", " ");
-        title = title.replaceAll("[-–—]\\s*\\S{3,12}$", " ");
-        return title.replaceAll("\\s{2,}", " ").trim();
+        title = title.replaceAll("[\\[\\(]\\s*[\\]\\)]", " ");
+        // dangling opener when quality truncation cut inside a bracket: "Film - [REMUX"
+        title = title.replaceAll("[\\[\\(]\\s*[^\\]\\)]*$", " ");
+        title = title.replaceAll("[-–—]\\s*(?:[A-Z0-9]{2,10}|[A-Za-z]*[A-Z][A-Za-z0-9]*[0-9]+)\\s*$", " ");
+        // leftovers from bracket/year/quality removal: "Ant-Man (2015) - [" → "Ant-Man"
+        title = title.replaceAll("\\s{2,}", " ").trim();
+        title = title.replaceAll("^[\\s.,\\[\\(]+", "")
+                .replaceAll("[\\s.,\\[\\(\\-–—]+$", "")
+                .replaceAll("[-–—]+$", "")
+                .trim();
+        return title;
     }
 
     public static ReleaseInfo parse(String fileName, String extension) {

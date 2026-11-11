@@ -21,10 +21,14 @@ public final class RenamiFrame extends JFrame {
     private final HistoryPanel historyPanel = new HistoryPanel();
     private final java.util.Map<String, JButton> primaryButtons = new java.util.HashMap<>();
     private JPanel content;
+    private Sidebar sidebar;
 
     /** Switches the visible card and re-arms the Return-key default button. */
     void showView(String id) {
         ((CardLayout) content.getLayout()).show(content, id);
+        if (sidebar != null) {
+            sidebar.setActive(id);
+        }
         JButton primary = primaryButtons.get(id);
         if (primary != null) {
             getRootPane().setDefaultButton(primary);
@@ -65,16 +69,17 @@ public final class RenamiFrame extends JFrame {
                 "checksum", checksumPanel.generateButton(),
                 "history", historyPanel.undoButton()));
 
-        Sidebar sidebar = new Sidebar(
+        // FileBot's rail set stays on the rail; our extra views live behind "More"
+        sidebar = new Sidebar(
                 List.of(new Sidebar.Item("rename", "Rename", "rename"),
                         new Sidebar.Item("episodes", "Episodes", "episodes"),
-                        new Sidebar.Item("postprocess", "Post-Process", "postprocess"),
-                        new Sidebar.Item("watch", "Watch", "watch"),
                         new Sidebar.Item("subtitles", "Subtitles", "subtitles"),
                         new Sidebar.Item("filter", "Filter", "filter"),
-                        new Sidebar.Item("duplicates", "Duplicates", "duplicates"),
                         new Sidebar.Item("checksum", "Checksum", "checksum"),
                         new Sidebar.Item("history", "History", "history")),
+                List.of(new Sidebar.Item("postprocess", "Post-Process", "postprocess"),
+                        new Sidebar.Item("watch", "Watch", "watch"),
+                        new Sidebar.Item("duplicates", "Duplicates", "duplicates")),
                 this::showView);
 
         add(sidebar, BorderLayout.WEST);
@@ -101,7 +106,8 @@ public final class RenamiFrame extends JFrame {
             System.err.println("error: no display available — use the `rename` command instead");
             return 3;
         }
-        RenamiTheme.apply();
+        String theme = app.renami.util.Config.load().get("theme");
+        RenamiTheme.apply(theme == null ? "auto" : theme);
         java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
         SwingUtilities.invokeLater(() -> {
             RenamiFrame frame = new RenamiFrame(preload);

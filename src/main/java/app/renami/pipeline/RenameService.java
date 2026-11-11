@@ -182,6 +182,14 @@ public final class RenameService {
         List<RenameOperation> plan = new ArrayList<>();
         for (Item item : items) {
             ReleaseInfo info = item.info();
+            // local mode must not invent titles: without a year (or an episode
+            // marker) the guess is unreliable ("hd1080-bgt.mkv" → "hd1080.mkv"),
+            // so leave such files untouched instead of renaming them to garbage
+            if (info.titleGuess().isBlank() || (info.year() == 0 && !info.hasEpisode())) {
+                log.println("skip (" + item.file().getFileName()
+                        + ": no year or episode marker, local mode won't guess a title)");
+                continue;
+            }
             String template;
             Map<String, Object> vars;
             if (info.hasEpisode()) {

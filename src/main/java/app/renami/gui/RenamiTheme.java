@@ -34,9 +34,18 @@ public final class RenamiTheme {
     private RenamiTheme() {
     }
 
-    /** Installs the look-and-feel. Call before creating any Swing component. */
+    /** Installs the look-and-feel (following the desktop appearance). Call before creating any Swing component. */
     public static void apply() {
-        boolean dark = isSystemDark();
+        apply("auto");
+    }
+
+    /** Installs the look-and-feel for an explicit mode: auto | light | dark. */
+    public static void apply(String mode) {
+        boolean dark = switch (mode == null ? "auto" : mode.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "dark" -> true;
+            case "light" -> false;
+            default -> isSystemDark();
+        };
         Font uiFont = systemUiFont();
         if (uiFont != null) {
             UIManager.put("defaultFont", uiFont);
@@ -54,6 +63,21 @@ public final class RenamiTheme {
             } catch (Exception ignoredAgain) {
                 // stay on the cross-platform default
             }
+        }
+    }
+
+    /**
+     * Switch the theme at runtime: persists the choice to ~/.renami/config.properties,
+     * re-installs the look-and-feel and refreshes every open window.
+     *
+     * @param mode auto | light | dark
+     */
+    public static void setTheme(String mode) {
+        app.renami.util.Config.set("theme", mode);
+        apply(mode);
+        for (java.awt.Frame f : java.awt.Frame.getFrames()) {
+            javax.swing.SwingUtilities.updateComponentTreeUI(f);
+            f.invalidate();
         }
     }
 

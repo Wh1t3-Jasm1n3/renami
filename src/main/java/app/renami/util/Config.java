@@ -40,4 +40,26 @@ public final class Config {
     public static Config load() {
         return new Config();
     }
+
+    /** Persist a key into ~/.renami/config.properties (read-modify-write). */
+    public static synchronized void set(String key, String value) {
+        Path file = dataDir().resolve("config.properties");
+        Properties p = new Properties();
+        if (Files.isRegularFile(file)) {
+            try (InputStream in = Files.newInputStream(file)) {
+                p.load(in);
+            } catch (IOException e) {
+                System.err.println("warning: cannot read " + file + ": " + e.getMessage());
+            }
+        }
+        p.setProperty(key, value);
+        try {
+            Files.createDirectories(file.getParent());
+            try (var out = Files.newOutputStream(file)) {
+                p.store(out, "renami");
+            }
+        } catch (IOException e) {
+            System.err.println("warning: cannot write " + file + ": " + e.getMessage());
+        }
+    }
 }

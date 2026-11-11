@@ -166,7 +166,6 @@ public final class RenamePanel extends JPanel {
         toolbar.add(iconButton("exclude", "Exclude Selected Items (Delete)", e -> removeSelected()));
         toolbar.add(textButton("Load", e -> loadFiles()));
         toolbar.add(popupButton("clear", "Clear", this::buildClearPopup));
-        toolbar.add(iconButton("history", "Open History", e -> openHistory()));
         toolbar.add(popupButton("presets", "Presets", this::buildPresetsPopup));
         return buildCard("Original Files", originalCard, toolbar);
     }
@@ -1150,40 +1149,6 @@ public final class RenamePanel extends JPanel {
         } catch (Exception e) {
             statusLabel.setText("could not save presets");
         }
-    }
-
-    // ============================================================
-    // History dialog (FileBot's Open History)
-    // ============================================================
-
-    private void openHistory() {
-        DefaultTableModel model = new DefaultTableModel(
-                new Object[]{"When", "Files", "Status"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        List<HistoryStore.Batch> batches = List.of();
-        try {
-            batches = history.batches();
-            for (HistoryStore.Batch batch : batches.reversed()) {
-                model.addRow(new Object[]{
-                        java.time.LocalDateTime.ofInstant(
-                                java.time.Instant.ofEpochMilli(batch.time()), java.time.ZoneId.systemDefault())
-                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-                        batch.ops().size(),
-                        batch.undone() ? "undone" : "applied"});
-            }
-        } catch (Exception e) {
-            model.addRow(new Object[]{"history unavailable", "", ""});
-        }
-        JTable table = new JTable(model);
-        Ui.styleTable(table);
-        table.getColumnModel().getColumn(2).setCellRenderer(Ui.statusRenderer());
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setPreferredSize(new Dimension(520, 300));
-        JOptionPane.showMessageDialog(this, scroll, "Rename History", JOptionPane.PLAIN_MESSAGE);
     }
 
     // ============================================================
