@@ -11,6 +11,7 @@ import java.util.List;
 public final class RenamiFrame extends JFrame {
 
     private final RenamePanel renamePanel = new RenamePanel();
+    private final PostProcessPanel postProcessPanel = new PostProcessPanel();
     private final SubtitlesPanel subtitlesPanel = new SubtitlesPanel();
     private final DupePanel dupePanel = new DupePanel();
     private final HistoryPanel historyPanel = new HistoryPanel();
@@ -27,6 +28,7 @@ public final class RenamiFrame extends JFrame {
 
         JPanel content = new JPanel(new CardLayout());
         content.add(renamePanel, "rename");
+        content.add(postProcessPanel, "postprocess");
         content.add(subtitlesPanel, "subtitles");
         content.add(dupePanel, "duplicates");
         content.add(historyPanel, "history");
@@ -34,12 +36,14 @@ public final class RenamiFrame extends JFrame {
         // each view's primary action becomes the Return-key default button
         java.util.Map<String, JButton> primary = java.util.Map.of(
                 "rename", renamePanel.renameButton(),
+                "postprocess", postProcessPanel.runButton(),
                 "subtitles", subtitlesPanel.downloadButton(),
                 "duplicates", dupePanel.findButton(),
                 "history", historyPanel.undoButton());
 
         Sidebar sidebar = new Sidebar(
                 List.of(new Sidebar.Item("rename", "Rename", "rename"),
+                        new Sidebar.Item("postprocess", "Post-Process", "postprocess"),
                         new Sidebar.Item("subtitles", "Subtitles", "subtitles"),
                         new Sidebar.Item("duplicates", "Duplicates", "duplicates"),
                         new Sidebar.Item("history", "History", "history")),

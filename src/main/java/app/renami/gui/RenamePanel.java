@@ -175,7 +175,7 @@ public final class RenamePanel extends JPanel {
                 return c;
             }
         });
-        table.getColumnModel().getColumn(2).setCellRenderer(new StatusRenderer());
+        table.getColumnModel().getColumn(2).setCellRenderer(Ui.statusRenderer());
         wrap.add(tableScroll, BorderLayout.CENTER);
         return wrap;
     }
@@ -286,24 +286,6 @@ public final class RenamePanel extends JPanel {
                     java.awt.BasicStroke.JOIN_ROUND, 0, new float[]{6, 5}, 0));
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
             g2.dispose();
-        }
-    }
-
-    /** Status column: green for renames, muted for unchanged, red for problems. */
-    private static final class StatusRenderer extends javax.swing.table.DefaultTableCellRenderer {
-        @Override
-        public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
-                                                                boolean isSelected, boolean hasFocus, int row, int column) {
-            java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-            if (!isSelected) {
-                String status = String.valueOf(value);
-                c.setForeground(switch (status) {
-                    case "rename", "applied" -> new Color(0x30, 0xB0, 0x60);
-                    case "unchanged" -> Ui.secondary();
-                    default -> new Color(0xE0, 0x4A, 0x4A);
-                });
-            }
-            return c;
         }
     }
 

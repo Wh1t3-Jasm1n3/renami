@@ -151,6 +151,26 @@ public final class Ui {
         });
     }
 
+    /** Status column: green for applied renames, muted for unchanged, red for problems. */
+    public static javax.swing.table.DefaultTableCellRenderer statusRenderer() {
+        return new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                                                                    boolean isSelected, boolean hasFocus, int row, int column) {
+                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    String status = String.valueOf(value);
+                    c.setForeground(switch (status) {
+                        case "rename", "applied", "planned" -> new Color(0x30, 0xB0, 0x60);
+                        case "unchanged" -> Ui.secondary();
+                        default -> new Color(0xE0, 0x4A, 0x4A);
+                    });
+                }
+                return c;
+            }
+        };
+    }
+
     /** Rounded card panel with a hairline border. */
     public static JPanel card(JComponent contents) {
         JPanel card = new JPanel(new java.awt.BorderLayout()) {
