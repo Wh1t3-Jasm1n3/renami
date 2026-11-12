@@ -17,10 +17,10 @@ using expression templates. Undo anything, anytime.
 
 Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
 
-- **Renami-1.7.0-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed
+- **Renami-1.7.4-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed
   and notarized by Apple, so Gatekeeper opens it without warnings.
-- **Renami-1.7.0.dmg** — the same app in a disk-image installer (drag to Applications).
-- **renami-1.7.0-cli.zip** — command line (requires JDK 21+), or build from source below.
+- **Renami-1.7.4.dmg** — the same app in a disk-image installer (drag to Applications).
+- **renami-1.7.4-cli.zip** — command line (requires JDK 21+), or build from source below.
 
 Already installed? Renami checks GitHub on launch and offers **Update & Restart** in one click —
 or run `renami update` from the terminal.
@@ -52,7 +52,7 @@ mode that follows the desktop, drag & drop everywhere, and one sidebar with ever
 | View | What it does |
 |---|---|
 | **Rename** | The proven dual-panel layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVmaze/OMDb/Kitsu (TVmaze needs no key) → edit names (double-click, Load Names, Edit Format with live preview, Presets menu) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
-| **Episodes** | Pick a show and season, get the episode list from the datasource, and rename downloaded episodes against it. |
+| **Episodes** | The show guide is the source of truth here (the Rename view treats your *files* as the source of truth). Pick a show and season, get the episode list from the datasource, then drop your files onto it: each file auto-attaches to its episode row — by `S01E02`, by air date in the name, by absolute or trailing number, leftovers fill the remaining rows in order. Fix mistakes with Attach/Detach in the right-click menu, then **Rename attached** writes `Show - S01E39 - Title.ext` in place (undoable in History). |
 | **Subtitles** | Search OpenSubtitles for every media file in a folder and download matches next to them. |
 | **Filter** | Regex/glob file filter with live preview — the same engine as `renami filter`. |
 | **Checksum** | Generate SHA-256/SHA-1/MD5/eD2K/CRC32 hashes, save SFV/MD5-style sidecars, verify with OK/MISMATCH/MISSING at a glance. |
@@ -102,9 +102,10 @@ variables: `RENAMI_TMDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
 
 ## Datasources and API keys
 
-Renami is built so that **a fresh install needs no key at all** for TV. The GUI's
-*Help ▸ API Keys…* panel lists every service with a **Get key…** button (opens the
-sign-up page) and a **Test** button (validates the key with a live lookup).
+Renami is built so that **a fresh install needs no key at all** for TV. The first-run setup
+dialog (also *Help ▸ API Keys…*) lists every service with a **Get key…** button (opens the
+sign-up page) and a **Test** button (validates the key with a live lookup); stored keys are
+masked until you tap the eye, and the config file is written `chmod 600`.
 
 | Service | Key? | Cost for personal use | Covers |
 |---|---|---|---|
@@ -138,7 +139,7 @@ key, because TVmaze has no public movie endpoint.
   `Movie.jpg`) follow the media file through rename/move/copy/link
 - 📦 **Archives** — zip/tar/7z extracted transparently by Post-Process; archives can be
   deleted after their contents are processed
-- 🎵 **Music** — audio fingerprinting with fpcalc + AcouSTID/MusicBrainz lookup (`track`)
+- 🎵 **Music** — audio fingerprinting with fpcalc + AcoustID/MusicBrainz lookup (`track`)
 - 📜 **Scripting** — Groovy `--script` hooks with `fn`/`info`/`source`/`target` bindings and `--def` vars
 - 🛠 **Probe** — MediaInfo/ffprobe technical metadata dump
 
@@ -177,6 +178,7 @@ gradle releaseArtifacts  # signed + notarized zip/dmg/CLI zips in build/artifact
 | 1.7.1 | Runs on any Mac: bundle a self-contained Temurin runtime (no Homebrew libraries), full-bleed app icon | ✅ |
 | 1.7.2 | Auto-update fix: schedule the relaunch before the app is swapped, so Update & Restart actually restarts | ✅ |
 | 1.7.3 | App icon: full-bleed square artwork — macOS 26+ masks icons into its own squircle, and our rounded corners left a gray plate frame | ✅ |
+| 1.7.4 | GUI polish loop: guide-driven Episodes tab (auto-attach files to episodes), one-line rename rows, grouped Fetch menu with the active source ticked, sidebar centring, window minimum size so no button is ever clipped | ✅ |
 | 1.8 | Language packs: i18n engine, 简体中文 + 繁體中文, drop-in community packs (`~/.renami/langs/`) | 🔜 planned |
 | — | Polish loop: macOS GUI + terminal (TUI/CLI) refinements from hands-on testing | 🔄 ongoing |
 | 2.0 | Media-server mode: write Plex/Emby/Jellyfin metadata (xattr + NFO sidecars) when renaming/post-processing — the open-source renamer for media-server libraries | 🔜 planned |
