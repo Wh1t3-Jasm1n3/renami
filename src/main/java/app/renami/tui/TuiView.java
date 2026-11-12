@@ -21,6 +21,11 @@ public interface TuiView {
     /** One-line help/result text for the bottom status bar. */
     String status();
 
+    /** True while a background task runs; the app then repaints periodically. */
+    default boolean busy() {
+        return false;
+    }
+
     /** Called when the tab becomes active (e.g. to refresh lists). */
     default void onActivate() {
     }

@@ -73,8 +73,12 @@ public final class PostProcessController {
         String template = episodeMode ? options.tvFormat() : options.movieFormat();
         RenameService.Options serviceOptions =
                 new RenameService.Options(options.mode(), template, options.minScore(), options.order());
+        // FileBot semantics: '/' in the format builds folders even when processing
+        // in place — resolve the structure under the process folder itself.
         RenameService.TargetResolver resolver = output != null
                 ? RenameService.structuredResolver(template, output.toAbsolutePath())
+                : template.contains("/")
+                ? RenameService.structuredResolver(template, input.toAbsolutePath())
                 : null;
         List<RenameOperation> plan = service.plan(candidates, serviceOptions, resolver);
         if (options.companion()) {

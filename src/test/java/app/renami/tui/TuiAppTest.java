@@ -47,6 +47,14 @@ class TuiAppTest {
     }
 
     @Test
+    void stdinEofEndsTheLoop() throws Exception {
+        // a closed stdin must end the poll loop instead of spinning on EOF keystrokes
+        TuiApp app = new TuiApp(List.of(new RenameView()));
+        int code = app.run(terminalWith(new KeyStroke(KeyType.EOF)));
+        assertEquals(0, code);
+    }
+
+    @Test
     void renameViewReportsMissingPathsInsteadOfThrowing() {
         RenameView view = new RenameView();
         for (char c : "/definitely/not/a/path".toCharArray()) {

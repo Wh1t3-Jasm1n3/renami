@@ -28,16 +28,31 @@ import java.util.List;
  */
 public final class RenameView implements TuiView {
 
+    private final String mode;
+    private final String tabTitle;
     private final StringBuilder path = new StringBuilder();
     private List<Path> files = List.of();
-    private List<RenameOperation> plan = List.of();
-    private String status = "Type a file or folder path, press Enter to scan and plan.";
+    private volatile List<RenameOperation> plan = List.of();
+    private volatile String status = "Type a file or folder path, press Enter to scan and plan.";
     private boolean confirmApply;
+    private volatile boolean busy;
+    private volatile boolean applying; // a rename is in flight: do not cancel
+    private volatile int generation;   // bumped by Escape to discard a running match
     private int scroll;
+
+    public RenameView() {
+        this("auto", "Rename");
+    }
+
+    /** The Episodes tab is the same pipeline forced into episode matching. */
+    public RenameView(String mode, String tabTitle) {
+        this.mode = mode;
+        this.tabTitle = tabTitle;
+    }
 
     @Override
     public String title() {
-        return "Rename";
+        return tabTitle;
     }
 
     @Override
@@ -46,9 +61,27 @@ public final class RenameView implements TuiView {
     }
 
     @Override
+    public boolean busy() {
+        return busy;
+    }
+
+    @Override
     public boolean onKey(KeyStroke key) {
         if (key.getKeyType() == KeyType.Tab || key.getKeyType() == KeyType.ReverseTab) {
             return false; // let the app switch tabs
+        }
+        if (busy) {
+            // Escape cancels a running match; other keys are swallowed.
+            // A rename in flight is never cancelled (files are already moving).
+            if (key.getKeyType() == KeyType.Escape && !applying) {
+                generation++;
+                busy = false;
+                files = List.of();
+                plan = List.of();
+                path.setLength(0);
+                status = "Cleared. Type a file or folder path, press Enter to scan and plan.";
+            }
+            return true;
         }
         if (confirmApply) {
             Character c = key.getCharacter();
@@ -73,6 +106,7 @@ public final class RenameView implements TuiView {
                 }
                 files = List.of();
                 plan = List.of();
+                path.setLength(0);
                 status = "Cleared. Type a file or folder path, press Enter to scan and plan.";
             }
             case PageDown -> scroll = Math.min(scroll + 10, Math.max(0, plan.size() - 1));
@@ -117,37 +151,65 @@ public final class RenameView implements TuiView {
         }
         status = "matching " + files.size() + " files ...";
         scroll = 0;
-        ByteArrayOutputStream log = new ByteArrayOutputStream();
-        try {
-            Datasource datasource = Datasources.create(Config.load(), "auto", false);
-            RenameService service = new RenameService(datasource,
-                    new PrintStream(log, true, StandardCharsets.UTF_8));
-            plan = service.plan(files, new RenameService.Options("auto", null, 0.60));
-            status = plan.size() + " of " + files.size() + " names planned — press r to rename";
-        } catch (Exception e) {
-            plan = List.of();
-            status = "match failed: " + e.getMessage();
-        }
+        busy = true;
+        int generation = this.generation;
+        Thread worker = new Thread(() -> {
+            try {
+                Datasource datasource = Datasources.create(Config.load(), "auto", false);
+                RenameService service = new RenameService(datasource,
+                        new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8));
+                List<RenameOperation> planned =
+                        service.plan(files, new RenameService.Options(mode, null, 0.60));
+                if (generation == this.generation) { // not cancelled meanwhile
+                    plan = planned;
+                    status = plan.size() + " of " + files.size()
+                            + " names planned — press r to rename";
+                }
+            } catch (Exception e) {
+                if (generation == this.generation) {
+                    plan = List.of();
+                    status = "match failed: " + e.getMessage();
+                }
+            } finally {
+                if (generation == this.generation) {
+                    busy = false;
+                }
+            }
+        }, "renami-tui-" + tabTitle.toLowerCase());
+        worker.setDaemon(true);
+        worker.start();
     }
 
     private void apply() {
-        try {
-            RenameExecutor executor = new RenameExecutor(ConflictPolicy.FAIL, TransferAction.RENAME);
-            List<RenameExecutor.Result> results = executor.apply(plan);
-            List<RenameOperation> applied = results.stream()
-                    .filter(RenameExecutor.Result::applied)
-                    .map(RenameExecutor.Result::operation)
-                    .toList();
-            new HistoryStore().record(applied, TransferAction.RENAME);
-            long skipped = results.size() - applied.size();
-            status = applied.size() + " files renamed"
-                    + (skipped > 0 ? " (" + skipped + " skipped: conflicts)" : "")
-                    + ". Use `renami undo` to revert.";
-            plan = List.of();
-            files = List.of();
-        } catch (Exception e) {
-            status = "rename failed: " + e.getMessage();
-        }
+        List<RenameOperation> toApply = plan;
+        plan = List.of();
+        busy = true;
+        applying = true;
+        status = "renaming " + toApply.size() + " files ...";
+        Thread worker = new Thread(() -> {
+            try {
+                RenameExecutor executor =
+                        new RenameExecutor(ConflictPolicy.FAIL, TransferAction.RENAME);
+                List<RenameExecutor.Result> results = executor.apply(toApply);
+                List<RenameOperation> applied = results.stream()
+                        .filter(RenameExecutor.Result::applied)
+                        .map(RenameExecutor.Result::operation)
+                        .toList();
+                new HistoryStore().record(applied, TransferAction.RENAME);
+                long skipped = results.size() - applied.size();
+                status = applied.size() + " files renamed"
+                        + (skipped > 0 ? " (" + skipped + " skipped: conflicts)" : "")
+                        + ". Use the History tab to undo.";
+                files = List.of();
+            } catch (Exception e) {
+                status = "rename failed: " + e.getMessage();
+            } finally {
+                busy = false;
+                applying = false;
+            }
+        }, "renami-tui-apply");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     @Override
