@@ -1,7 +1,6 @@
 // Generates packaging/AppIcon.iconset/*.png for the Renami macOS bundle.
 // Run: java tools/GenerateIcon.java   (then: iconutil -c icns packaging/AppIcon.iconset)
 import java.awt.*;
-import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import javax.imageio.ImageIO;
@@ -25,16 +24,16 @@ public class GenerateIcon {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        // Full-bleed: fill the whole canvas with the rounded square (corner arc ~18.5%,
-        // matching Apple's icon shape). A transparent margin makes macOS 26+ render a
-        // system material plate *behind* the icon, which reads as a gray frame.
+        // Full-bleed SQUARE artwork: macOS 11+ masks every app icon into its own
+        // rounded-rect/squircle shape (macOS 26 forces it). Any margin or rounding in
+        // our artwork leaves gaps where the system material plate shows through as a
+        // gray frame — so the image must fill the entire canvas edge to edge.
         float s = w;
         float off = 0f;
-        float arc = s * 0.185f;
         Paint gradient = new GradientPaint(off, off, new Color(0x14, 0x6E, 0x64),
                 off + s, off + s, new Color(0x0B, 0x35, 0x5E));
         g.setPaint(gradient);
-        g.fill(new RoundRectangle2D.Float(off, off, s, s, arc, arc));
+        g.fillRect(0, 0, w, h);
 
         // filmstrip motif along the left edge
         g.setColor(new Color(255, 255, 255, 46));

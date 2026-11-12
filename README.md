@@ -177,10 +177,12 @@ gradle releaseArtifacts  # signed + notarized zip/dmg/CLI zips in build/artifact
 | 1.7.0 | dmg installer, Developer ID signing + Apple notarization (Gatekeeper-clean out of the box) | ✅ |
 | 1.7.1 | Runs on any Mac: bundle a self-contained Temurin runtime (no Homebrew libraries), full-bleed app icon | ✅ |
 | 1.7.2 | Auto-update fix: schedule the relaunch before the app is swapped, so Update & Restart actually restarts | ✅ |
-| 1.8 | Windows build: jpackage MSI/exe — GUI, CLI and TUI verified on Windows | 🔜 planned |
-| 1.9 | Homebrew: CLI formula + notarized cask — `brew install renami` | 🔜 planned |
+| 1.7.3 | App icon: full-bleed square artwork — macOS 26+ masks icons into its own squircle, and our rounded corners left a gray plate frame | ✅ |
+| 1.8 | Language packs: i18n engine, 简体中文 + 繁體中文, drop-in community packs (`~/.renami/langs/`) | 🔜 planned |
+| — | Polish loop: macOS GUI + terminal (TUI/CLI) refinements from hands-on testing | 🔄 ongoing |
 | 2.0 | Media-server mode: write Plex/Emby/Jellyfin metadata (xattr + NFO sidecars) when renaming/post-processing — the open-source renamer for media-server libraries | 🔜 planned |
 | 2.1 | Advanced Renamer feature study: port the best rule/tag-based renaming ideas into the format engine | 🔜 planned |
+| Later | Windows build (jpackage MSI/exe); Homebrew formula + cask | 🕓 backlog |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 

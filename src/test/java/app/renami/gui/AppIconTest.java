@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the build-time generated icon without looking at it: presence on the
- * classpath, correct size, and the expected rounded-square alpha geometry.
+ * classpath, correct size, and the full-bleed square alpha geometry macOS expects.
  */
 class AppIconTest {
 
@@ -23,16 +23,21 @@ class AppIconTest {
     }
 
     @Test
-    void iconIsARoundedOpaqueSquareWithTransparentCorners() {
+    void iconIsAFullBleedOpaqueSquare() {
+        // macOS 11+ (and macOS 26 in particular) masks every app icon into its own
+        // rounded shape; artwork with transparent margins or rounded corners shows the
+        // system material plate as a gray frame. The artwork must fill the canvas.
         BufferedImage image = AppIcon.load();
         assertNotNull(image);
         int center = image.getRGB(image.getWidth() / 2, image.getHeight() / 2);
         assertEquals(0xFF, (center >>> 24) & 0xFF, "center must be fully opaque");
 
-        for (int[] corner : new int[][]{{0, 0}, {image.getWidth() - 1, 0},
-                {0, image.getHeight() - 1}, {image.getWidth() - 1, image.getHeight() - 1}}) {
-            int argb = image.getRGB(corner[0], corner[1]);
-            assertEquals(0x00, (argb >>> 24) & 0xFF, "corner " + corner[0] + "," + corner[1] + " must be transparent");
+        for (int[] point : new int[][]{{0, 0}, {image.getWidth() - 1, 0},
+                {0, image.getHeight() - 1}, {image.getWidth() - 1, image.getHeight() - 1},
+                {image.getWidth() / 2, 0}, {0, image.getHeight() / 2},
+                {image.getWidth() / 2, image.getHeight() - 1}, {image.getWidth() - 1, image.getHeight() / 2}}) {
+            int argb = image.getRGB(point[0], point[1]);
+            assertEquals(0xFF, (argb >>> 24) & 0xFF, "pixel " + point[0] + "," + point[1] + " must be opaque (full-bleed artwork)");
         }
 
         // the white "R" glyph sits in the middle: at least one bright pixel near the centre
