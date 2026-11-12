@@ -175,6 +175,7 @@ gradle releaseArtifacts  # signed + notarized zip/dmg/CLI zips in build/artifact
 | 1.6.1 | Auto-update: startup version check, one-click Update & Restart in the GUI, `renami update` CLI | ✅ |
 | 1.7 | Full-screen TUI (Lanterna) with all modes as tabs | ✅ |
 | 1.7.0 | dmg installer, Developer ID signing + Apple notarization (Gatekeeper-clean out of the box) | ✅ |
+| 1.7.1 | Runs on any Mac: bundle a self-contained Temurin runtime (no Homebrew libraries), full-bleed app icon | ✅ |
 | 1.8 | Windows build: jpackage MSI/exe — GUI, CLI and TUI verified on Windows | 🔜 planned |
 | 1.9 | Homebrew: CLI formula + notarized cask — `brew install renami` | 🔜 planned |
 | 2.0 | Media-server mode: write Plex/Emby/Jellyfin metadata (xattr + NFO sidecars) when renaming/post-processing — the open-source renamer for media-server libraries | 🔜 planned |

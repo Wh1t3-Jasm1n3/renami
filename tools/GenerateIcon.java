@@ -25,10 +25,11 @@ public class GenerateIcon {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        // Apple's macOS icon grid: the rounded square covers ~80.5% of the canvas
-        // (1024 grid → 824pt icon, ~10% clear margin) with a corner arc of ~18.5%.
-        float s = w * 0.805f;
-        float off = (w - s) / 2f;
+        // Full-bleed: fill the whole canvas with the rounded square (corner arc ~18.5%,
+        // matching Apple's icon shape). A transparent margin makes macOS 26+ render a
+        // system material plate *behind* the icon, which reads as a gray frame.
+        float s = w;
+        float off = 0f;
         float arc = s * 0.185f;
         Paint gradient = new GradientPaint(off, off, new Color(0x14, 0x6E, 0x64),
                 off + s, off + s, new Color(0x0B, 0x35, 0x5E));

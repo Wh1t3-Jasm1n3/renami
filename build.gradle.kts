@@ -60,6 +60,24 @@ val javaExt = project.extensions.getByType<JavaPluginExtension>()
 val jdkLauncher = toolchains.launcherFor(javaExt.toolchain)
 fun jdkBin(tool: String) = File(jdkLauncher.get().metadata.installationPath.asFile, "bin/$tool").absolutePath
 
+// jpackage must bundle a SELF-CONTAINED runtime: Homebrew's openjdk links Homebrew's
+// harfbuzz/freetype/giflib/jpeg-turbo/libpng/little-cms2, and the bundled app then
+// crashes with UnsatisfiedLinkError on Macs without those formulas installed.
+// Temurin bundles its own copies (all deps resolve via @rpath). Override with -PpackageJdk=...
+val packageJdkHome = (project.findProperty("packageJdk") as String?)
+    ?: "${System.getProperty("user.home")}/tools/temurin-21/Contents/Home"
+
+fun packageBin(tool: String): String {
+    val bin = File(packageJdkHome, "bin/$tool")
+    if (!bin.canExecute()) {
+        throw GradleException(
+            "Packaging JDK not found at $packageJdkHome — install Temurin 21 " +
+                "(e.g. download from https://adoptium.net) or pass -PpackageJdk=<jdk home>."
+        )
+    }
+    return bin.absolutePath
+}
+
 fun runCmd(vararg args: String) {
     val rc = ProcessBuilder(args.toList()).inheritIO().start().waitFor()
     if (rc != 0) throw GradleException("Command failed (exit $rc): ${args.joinToString(" ")}")
@@ -152,7 +170,7 @@ val jpackageApp = tasks.register<Exec>("jpackageApp") {
     // macOS bundles reject versions starting with 0; strip the leading "0." for the bundle only
     val bundleVersion = project.version.toString().removePrefix("0.")
     val args = mutableListOf(
-        jdkBin("jpackage"),
+        packageBin("jpackage"),
         "--type", "app-image",
         "--name", "Renami",
         "--app-version", bundleVersion,
@@ -224,7 +242,7 @@ val dmg = tasks.register<Exec>("dmg") {
     val outDir = layout.buildDirectory.dir("artifacts").get().asFile
     val appImage = layout.buildDirectory.dir("jpackage/Renami.app").get().asFile
     commandLine(
-        jdkBin("jpackage"),
+        packageBin("jpackage"),
         "--type", "dmg",
         "--name", "Renami",
         "--app-version", project.version.toString().removePrefix("0."),
