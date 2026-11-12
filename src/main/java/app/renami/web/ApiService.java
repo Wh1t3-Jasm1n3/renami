@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * The metadata services Renami knows about: where their keys come from, what they
  * cost a private user and how to prove a key works. This drives the API-key panel
- * (FileBot has the same list in its preferences) and the first-run setup dialog.
+ * and the first-run setup dialog.
  * <p>
  * Terms verified November 2026: TMDb and OMDb are free for personal use, TVmaze and
  * Kitsu need no key at all, and TheTVDB only issues project keys that require either

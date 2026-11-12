@@ -79,7 +79,7 @@ scan → parse (ReleaseInfo) → group (movie | per-show episodes)
   search hit becomes its own match candidate, which is what lets a romaji filename match an
   English-language record.
 - **Transfer mode is part of the journal** — `--action rename|move|copy|hardlink|symlink`
-  (FileBot-style) is recorded as a verb per op, so `undo` knows whether to move a file back
+  is recorded as a verb per op, so `undo` knows whether to move a file back
   (rename/move) or delete the created entry (copy/hardlink/symlink). Undo refuses to delete a
   copy when the source has since disappeared. Hardlinks degrade to a copy across filesystems
   instead of failing the batch; a case-only target on a case-insensitive filesystem is refused

@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Subtitle view, FileBot's layout: search field + language + Login, a result
+ * Subtitle view: search field + language + Login, a result
  * table with a filter field, and Download. Double-click a row to fetch it.
  */
 public final class SubtitlesPanel extends JPanel {
@@ -51,7 +51,7 @@ public final class SubtitlesPanel extends JPanel {
         body.setOpaque(false);
         body.add(Ui.card(buildOptions()), BorderLayout.NORTH);
 
-        // FileBot's result tab: filter field + clear icon above the subtitle list
+        // Result tab: filter field + clear icon above the subtitle list
         JPanel filter = new JPanel(new BorderLayout(6, 0));
         filter.setOpaque(false);
         filter.add(Ui.caption("Filter"), BorderLayout.NORTH);
@@ -109,7 +109,7 @@ public final class SubtitlesPanel extends JPanel {
         loginButton.addActionListener(e -> login());
         langBox.setEditable(true);
 
-        // FileBot: double-click a subtitle row to download it
+        // Double-click a subtitle row to download it
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -180,7 +180,7 @@ public final class SubtitlesPanel extends JPanel {
         return field;
     }
 
-    /** FileBot's Login icon: store the OpenSubtitles API key locally. */
+    /** Login icon: store the OpenSubtitles API key locally. */
     private void login() {
         Config config = Config.load();
         String current = config.get("opensubtitles.api.key");

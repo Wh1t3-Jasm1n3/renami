@@ -59,7 +59,7 @@ public interface Datasource {
     /**
      * True for anime-only providers (Kitsu). The auto chain then leaves them out
      * of movie searches, so a live-action movie never gets a false anime match —
-     * FileBot keeps anime databases (AniDB) out of its movie search chain too.
+     * Anime databases (AniDB) stay out of the movie search chain, too.
      */
     default boolean animeOnly() {
         return false;

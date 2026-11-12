@@ -36,7 +36,7 @@ public final class RenamiFrame extends JFrame {
         }
     }
 
-    /** FileBot's cross-mode transfer: files dropped on a rail mode switch and pipe in. */
+    /** Cross-mode transfer: files dropped on a rail mode switch and pipe in. */
     private void transferFiles(String id, List<java.nio.file.Path> files) {
         showView(id);
         switch (id) {
@@ -86,8 +86,8 @@ public final class RenamiFrame extends JFrame {
                 "history", historyPanel.undoButton(),
                 "list", listPanel.runButton()));
 
-        // FileBot's rail set (Rename/Episodes/Subtitles/SFV/Filter/List) stays on the
-        // rail; History is a toolbar dialog in FileBot, so it lives behind "More" here
+        // The classic rail set (Rename/Episodes/Subtitles/SFV/Filter/List) stays on the
+        // rail; History follows the toolbar-dialog pattern, so it lives behind "More" here
         sidebar = new Sidebar(
                 List.of(new Sidebar.Item("rename", "Rename", "rename", "#0A84FF"),
                         new Sidebar.Item("episodes", "Episodes", "episodes", "#BF5AF2"),
@@ -102,7 +102,7 @@ public final class RenamiFrame extends JFrame {
                 this::showView,
                 this::transferFiles);
 
-        // FileBot's Post Process option: renamed files flow straight into the Post-Process view
+        // Post Process option: renamed files flow straight into the Post-Process view
         renamePanel.setPostProcessHandler(files -> {
             postProcessPanel.preload(files);
             showView("postprocess");
@@ -122,7 +122,7 @@ public final class RenamiFrame extends JFrame {
         setLocationByPlatform(true);
     }
 
-    /** FileBot's macOS menu bar: Help menu with the docs/support links. */
+    /** macOS menu bar: Help menu with the docs/support links. */
     private void installMenuBar() {
         JMenuBar bar = new JMenuBar();
         JMenu help = new JMenu("Help");
@@ -199,7 +199,7 @@ public final class RenamiFrame extends JFrame {
             });
             frame.setVisible(true);
             ApiKeysDialog.setupIfUnconfigured(frame);
-            // FileBot-style startup version check (Help ▸ Check for Updates does the manual one)
+            // Startup version check (Help ▸ Check for Updates does the manual one)
             UpdateDialog.checkOnStartup(frame);
         });
         try {

@@ -1,43 +1,57 @@
-<img src="docs/app-icon.png" alt="Renami app icon" width="128" align="left" hspace="16" />
+<img src="docs/app-icon.png" alt="Renami app icon" width="128" align="left" hspace="40" vspace="8" />
 
 # Renami
 
-**Renami** is an open-source media file renamer and organizer for macOS — a clean-room
-reimplementation of the *concept* of tools like FileBot. Point it at a folder of movies or TV
-episodes (archives included), and it matches each file against online metadata databases, scores
-the candidates with a fuzzy-matching engine, and renames/moves them into a clean library using
-expression templates. Undo anything, anytime.
-
-> **Legal disclaimer.** Renami shares **no code** with FileBot. It is written from scratch against
-> publicly documented behavior and open-source third-party components. "FileBot" is a trademark of
-> its respective owner; Renami is an independent project.
+**Renami** is an open-source media file renamer and organizer for macOS. Point it at a folder
+of movies or TV episodes (archives included), and it matches each file against online metadata
+databases, scores the candidates with a fuzzy-matching engine, and renames/moves them into a
+clean library using expression templates. Undo anything, anytime.
 
 ## Download
 
 Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
 
-- **Renami-1.7.0-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed;
-  if Gatekeeper still complains (build not notarized), right-click → Open.
+- **Renami-1.7.0-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed
+  and notarized by Apple, so Gatekeeper opens it without warnings.
 - **Renami-1.7.0.dmg** — the same app in a disk-image installer (drag to Applications).
 - **renami-1.7.0-cli.zip** — command line (requires JDK 21+), or build from source below.
 
 Already installed? Renami checks GitHub on launch and offers **Update & Restart** in one click —
 or run `renami update` from the terminal.
 
+## Uninstall
+
+Renami is a single self-contained app — the installer never registers anything system-wide.
+To remove it, drag **Renami.app** from your Applications folder to the Trash. No background
+services, no receipts, no leftovers.
+
+Your settings and rename history live in `~/.renami/` and are kept on purpose: a reinstall
+picks up right where you left off, and the journal is what makes **Undo** work even across
+restarts.
+
+**Optional — delete your data too:**
+
+```bash
+rm -rf ~/.renami
+```
+
+This removes your settings and the rename journal — past renames can then no longer be undone
+through the app. Your renamed media files are of course untouched; they're yours.
+
 ## The desktop app
 
 `Renami.app` is a native-feeling macOS app: SF Pro typography, the system accent colour, light/dark
-mode that follows the desktop, drag & drop everywhere, and one sidebar with FileBot's views:
+mode that follows the desktop, drag & drop everywhere, and one sidebar with every view you need:
 
 | View | What it does |
 |---|---|
-| **Rename** | FileBot's proven layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVDB/TVmaze/OMDb/Kitsu (TVmaze needs no key) → edit names (double-click, Load Names, Edit Format with live preview, F1–F12 presets) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
+| **Rename** | The proven dual-panel layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVDB/TVmaze/OMDb/Kitsu (TVmaze needs no key) → edit names (double-click, Load Names, Edit Format with live preview, F1–F12 presets) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
 | **Episodes** | Pick a show and season, get the episode list from the datasource, and rename downloaded episodes against it. |
 | **Subtitles** | Search OpenSubtitles for every media file in a folder and download matches next to them. |
 | **Filter** | Regex/glob file filter with live preview — the same engine as `renami filter`. |
 | **Checksum** | Generate SHA-256/SHA-1/MD5/eD2K/CRC32 hashes, save SFV/MD5-style sidecars, verify with OK/MISMATCH/MISSING at a glance. |
 | **History** | Every batch is journalled — browse it and **Undo** any batch, even copies and links (those get deleted). |
-| **Post-Process** | The one-shot FileBot flow: pick a folder, archives are extracted automatically, everything is matched and moved into a structured output tree (`{n}/Season {s}/…`). Optionally delete processed archives. |
+| **Post-Process** | The one-shot flow: pick a folder, archives are extracted automatically, everything is matched and moved into a structured output tree (`{n}/Season {s}/…`). Optionally delete processed archives. |
 | **Watch** | Pick a folder and press Start — new files are processed the moment their download settles. Live activity log. |
 | **Duplicates** | 3-phase dupe finder (size → partial hash → full SHA-256) with groups side by side. |
 
@@ -128,7 +142,8 @@ key, because TVmaze has no public movie endpoint.
 ```bash
 gradle build          # compile + tests
 gradle installDist    # CLI at build/install/renami/bin/renami
-gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
+gradle jpackageApp    # macOS Renami.app (Developer ID signed) in build/jpackage
+gradle releaseArtifacts  # signed + notarized zip/dmg/CLI zips in build/artifacts
 ```
 
 ## Roadmap
@@ -149,10 +164,11 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 1.2 | companion-file import, folder watch (`renami watch`) | ✅ |
 | 1.3 | GUI history view, dark theme, subtitle search parity | ✅ |
 | 1.4 | 2026-macOS redesign (sidebar chrome, SF Pro, accent, dark mode) + GUI-first Post-Process, Watch and Checksum views | ✅ |
-| 1.5 | FileBot-parity Rename view: Original Files / New Names dual panels, per-list tool strips, center Match/Rename column, Edit Format dialog, presets | ✅ |
-| 1.6 | Key-free datasources (TVmaze + auto fallback chain), FileBot-style API-key panel with Get key/Test, first-run setup, full FileBot customer-journey parity (Load → Match → Rename → History → Undo) | ✅ |
+| 1.5 | Dual-panel Rename view: Original Files / New Names, per-list tool strips, center Match/Rename column, Edit Format dialog, presets | ✅ |
+| 1.6 | Key-free datasources (TVmaze + auto fallback chain), API-key panel with Get key/Test, first-run setup, full customer-journey parity (Load → Match → Rename → History → Undo) | ✅ |
 | 1.6.1 | Auto-update: startup version check, one-click Update & Restart in the GUI, `renami update` CLI | ✅ |
 | 1.7 | Full-screen TUI (Lanterna) with all modes as tabs | ✅ |
+| 1.7.0 | dmg installer, Developer ID signing + Apple notarization (Gatekeeper-clean out of the box) | ✅ |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 

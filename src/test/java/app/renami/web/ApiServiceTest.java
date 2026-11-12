@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ApiServiceTest {
 
     @Test
-    void everyFilebotServiceHasARow() {
+    void everyDatasourceServiceHasARow() {
         List<String> ids = ApiService.all().stream().map(ApiService::id).toList();
         assertEquals(List.of("tmdb", "tvmaze", "kitsu", "omdb", "tvdb", "opensubtitles", "local"), ids);
     }

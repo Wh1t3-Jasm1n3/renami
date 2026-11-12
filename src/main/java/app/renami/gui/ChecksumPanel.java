@@ -49,7 +49,7 @@ public final class ChecksumPanel extends JPanel {
         tableScroll.setBorder(BorderFactory.createEmptyBorder());
         Ui.styleTable(table);
         table.getColumnModel().getColumn(2).setCellRenderer(Ui.statusRenderer());
-        // FileBot's SFV table: Delete removes the selected rows
+        // SFV table: Delete removes the selected rows
         table.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("DELETE"), "deleteRows");
         table.getActionMap().put("deleteRows", new AbstractAction() {
             @Override

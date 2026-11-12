@@ -16,7 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Post-Process view: the one-shot FileBot flow — point at a folder (archives
+ * Post-Process view: the one-shot flow — point at a folder (archives
  * included), pick formats, preview the plan, run it. Runs on the same
  * {@link PostProcessController} as the CLI.
  */

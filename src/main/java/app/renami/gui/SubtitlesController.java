@@ -43,7 +43,7 @@ public final class SubtitlesController {
         return rows;
     }
 
-    /** Exact moviehash match first (FileBot parity); falls back to filename query search. */
+    /** Exact moviehash match first; falls back to filename query search. */
     private Candidate bestByHash(Path file, String lang) {
         try {
             if (!app.renami.hash.OpenSubtitlesHash.isHashable(file)) {
@@ -55,7 +55,7 @@ public final class SubtitlesController {
         }
     }
 
-    /** FileBot-style search string: title plus SxxEyy for episodes, plus year for movies. */
+    /** Search string: title plus SxxEyy for episodes, plus year for movies. */
     static String searchQuery(ReleaseInfo info) {
         StringBuilder query = new StringBuilder(info.titleGuess() == null ? "" : info.titleGuess());
         if (info.hasEpisode()) {
@@ -66,7 +66,7 @@ public final class SubtitlesController {
         return query.toString().trim();
     }
 
-    /** Rank query hits by title similarity to the file, download count breaks ties (FileBot parity). */
+    /** Rank query hits by title similarity to the file, download count breaks ties. */
     static Candidate bestByRelevance(List<Candidate> candidates, String titleGuess) {
         String guess = titleGuess == null ? "" : titleGuess;
         return candidates.stream()

@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Watch view: pick a folder, press Start, and new media files are processed
- * the moment their download settles — the FileBot "-watch" feature with a
+ * the moment their download settles — a watch-folder feature with a
  * live activity log.
  */
 public final class WatchPanel extends JPanel {

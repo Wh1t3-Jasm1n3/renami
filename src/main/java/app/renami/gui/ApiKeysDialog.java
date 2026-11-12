@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * FileBot's API-key panel: one row per metadata service, each with a
+ * API-key panel: one row per metadata service, each with a
  * "Get key…" button that opens the provider's sign-up page and a "Test"
  * button that validates the stored key with a live lookup. Services that
  * need no key at all (TVmaze, Kitsu, Local) are listed too — that is the

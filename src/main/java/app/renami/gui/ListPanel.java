@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * FileBot's List mode: generate a sequence of names from a format expression
+ * List mode: generate a sequence of names from a format expression
  * with From/To counters, then copy the list or save it as a text file.
  */
 public final class ListPanel extends JPanel {
@@ -85,7 +85,7 @@ public final class ListPanel extends JPanel {
         return sequenceButton;
     }
 
-    /** Render the format once per counter value, FileBot's From/To sequence. */
+    /** Render the format once per counter value, using the From/To sequence. */
     private void sequence() {
         outputModel.clear();
         int from = fromModel.getNumber().intValue();
@@ -115,7 +115,7 @@ public final class ListPanel extends JPanel {
         statusLabel.setText("list copied to clipboard");
     }
 
-    /** FileBot's Save as…: the native save panel writes the list to a text file. */
+    /** Save as…: the native save panel writes the list to a text file. */
     private void saveAs() {
         Window owner = SwingUtilities.getWindowAncestor(this);
         FileDialog chooser = new FileDialog(owner instanceof Frame f ? f : null, "Save list as", FileDialog.SAVE);

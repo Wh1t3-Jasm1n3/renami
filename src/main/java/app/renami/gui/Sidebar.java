@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * FileBot's mode rail, in our design language: one icon-over-label cell per
+ * The mode rail, in our design language: one icon-over-label cell per
  * view, big tap targets, and a subtle selection plate that keeps text and
  * icon fully legible in light and dark mode. Secondary views live behind a
  * "More" popup, and a header button collapses the rail to icons only.
@@ -106,7 +106,7 @@ final class Sidebar extends JPanel {
         scroller.setBorder(BorderFactory.createEmptyBorder());
         add(scroller, BorderLayout.CENTER);
 
-        // FileBot's cross-mode transfer: drop files onto a rail mode to switch and pipe them in
+        // Cross-mode transfer: drop files onto a rail mode to switch and pipe them in
         list.setDropMode(javax.swing.DropMode.ON);
         list.setTransferHandler(new javax.swing.TransferHandler() {
             @Override
@@ -255,7 +255,7 @@ final class Sidebar extends JPanel {
         repaint();
     }
 
-    /** Icon-over-label cell with a rounded selection plate (FileBot's rail). */
+    /** Icon-over-label cell with a rounded selection plate. */
     private final class RailCell implements ListCellRenderer<Item> {
         @Override
         public Component getListCellRendererComponent(JList<? extends Item> list, Item item, int index,

@@ -27,16 +27,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The rename view: FileBot's dual-panel layout — "Original Files" on the left,
+ * The rename view: the proven dual-panel layout — "Original Files" on the left,
  * "New Names" on the right, Match/Rename in the center column, each list with
  * its own tool strip — dressed in the 2026-macOS design language.
  *
  * One shared row model drives both lists, so the two panels can never drift
- * out of alignment (FileBot needs a whole "Match/align" algorithm for that).
+ * out of alignment (other renamers need a whole "Match/align" algorithm for that).
  */
 public final class RenamePanel extends JPanel {
 
-    /** One file pairing: original path, planned target, state, and FileBot's display name. */
+    /** One file pairing: original path, planned target, state, and the matched display name. */
     private record Pair(Path source, Path target, String status, String display) {
 
         Pair(Path source, Path target, String status) {
@@ -117,12 +117,12 @@ public final class RenamePanel extends JPanel {
 
         add(buildBottomBar(), BorderLayout.SOUTH);
 
-        // FileBot: the Match button opens the Fetch & Match Data popup, it does not match directly
+        // The Match button opens the Fetch & Match Data popup, it does not match directly
         matchButton.addActionListener(e ->
                 buildFetchPopup().show(matchButton, 0, matchButton.getHeight()));
         renameButton.addActionListener(e -> rename());
         renameButton.setEnabled(false);
-        // FileBot: right-click Rename → Settings popup
+        // Right-click Rename → Settings popup
         matchButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -202,7 +202,7 @@ public final class RenamePanel extends JPanel {
         toolbar.add(iconButton("up", "Align Up", e -> moveSelected(-1)));
         toolbar.add(iconButton("down", "Align Down", e -> moveSelected(1)));
         toolbar.add(iconButton("match", "Match", e -> match()));
-        // FileBot: Fetch Data opens the Fetch & Match Data popup, it does not match directly
+        // Fetch Data opens the Fetch & Match Data popup, it does not match directly
         JButton fetch = new JButton("Fetch Data");
         fetch.addActionListener(e -> buildFetchPopup().show(fetch, 0, -fetch.getHeight()));
         toolbar.add(fetch);
@@ -237,7 +237,7 @@ public final class RenamePanel extends JPanel {
         return column;
     }
 
-    /** Icon-over-text action button, FileBot's center column, our styling. */
+    /** Icon-over-text action button in the center column, our styling. */
     private static JComponent centerButton(JButton button, String icon, int size, boolean prominent) {
         button.setIcon(Ui.icon(icon, size - 34, prominent ? () -> Color.WHITE : Ui::text));
         button.setVerticalTextPosition(SwingConstants.BOTTOM);
@@ -301,7 +301,7 @@ public final class RenamePanel extends JPanel {
         originalList.addMouseListener(openMenu);
         namesList.addMouseListener(openMenu);
 
-        // double-click: left shows FileBot's row popup, right edits the name
+        // double-click: left shows the row popup, right edits the name
         originalList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -346,7 +346,7 @@ public final class RenamePanel extends JPanel {
                 }
             }
         });
-        // FileBot keyboard parity: Ctrl+L reveal, Ctrl+N edit name, Ctrl+M edit match
+        // Keyboard shortcuts: Ctrl+L reveal, Ctrl+N edit name, Ctrl+M edit match
         keys.put(KeyStroke.getKeyStroke("control L"), "reveal");
         actions.put("reveal", new AbstractAction() {
             @Override
@@ -421,7 +421,7 @@ public final class RenamePanel extends JPanel {
             add(partner);
         }
 
-        /** FileBot hides unmatched rows from New Names: a zero-height cell keeps the shared model aligned. */
+        /** Unmatched rows are hidden from New Names: a zero-height cell keeps the shared model aligned. */
         private static final JComponent HIDDEN_CELL = new JPanel() {
             @Override
             public Dimension getPreferredSize() {
@@ -429,7 +429,7 @@ public final class RenamePanel extends JPanel {
             }
         };
 
-        /** FileBot's label: the file name without its extension — the badge already carries it. */
+        /** Row label: the file name without its extension — the badge already carries it. */
         private static String baseName(Path file) {
             String name = file.getFileName().toString();
             int dot = name.lastIndexOf('.');
@@ -439,13 +439,13 @@ public final class RenamePanel extends JPanel {
         @Override
         public Component getListCellRendererComponent(JList<? extends Pair> list, Pair pair, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
-            // FileBot: New Names stays empty until a file is matched
+            // New Names stays empty until a file is matched
             if (!showSource && pair.status().equals(STATUS_NO_MATCH)) {
                 return HIDDEN_CELL;
             }
             Path shown = showSource ? pair.source() : pair.target();
             Path other = showSource ? pair.target() : pair.source();
-            // FileBot: the New Names list shows the matched display name, not the file name
+            // The New Names list shows the matched display name, not the file name
             name.setText(!showSource && pair.display() != null
                     ? pair.display() : baseName(shown));
             String partnerText = showSource && pair.display() != null
@@ -460,7 +460,7 @@ public final class RenamePanel extends JPanel {
                 name.setForeground(switch (pair.status()) {
                     case STATUS_RENAME -> new Color(0x30, 0xB0, 0x60);
                     case STATUS_UNCHANGED -> muted;
-                    // FileBot: unmatched rows stay plain — red is reserved for conflicts
+                    // Unmatched rows stay plain — red is reserved for conflicts
                     default -> fg;
                 });
                 partner.setForeground(muted);
@@ -475,7 +475,7 @@ public final class RenamePanel extends JPanel {
             return this;
         }
 
-        /** FileBot's extension pill: a small rounded badge with the file type. */
+        /** Extension pill: a small rounded badge with the file type. */
         private static final class Badge extends JLabel {
             @Override
             protected void paintComponent(Graphics g) {
@@ -500,7 +500,7 @@ public final class RenamePanel extends JPanel {
         for (Path path : dropped) {
             if (Files.isDirectory(path)) {
                 try (var stream = Files.list(path)) {
-                    // FileBot parity: a folder drop lists every entry, media files first
+                    // A folder drop lists every entry, media files first
                     List<Path> entries = stream.filter(Files::isRegularFile).sorted().toList();
                     entries.stream().filter(MediaScanner::isMedia).forEach(files::add);
                     entries.stream().filter(f -> !MediaScanner.isMedia(f)).forEach(files::add);
@@ -522,7 +522,7 @@ public final class RenamePanel extends JPanel {
         statusLabel.setText(rows.size() + " files — press Match to look them up");
     }
 
-    /** FileBot's Load: the OS file manager (Finder on macOS, Explorer on Windows). */
+    /** Load: the OS file manager (Finder on macOS, Explorer on Windows). */
     private void loadFiles() {
         Frame owner = SwingUtilities.getWindowAncestor(this) instanceof Frame f ? f : null;
         FileDialog chooser = new FileDialog(owner, "Load files", FileDialog.LOAD);
@@ -540,9 +540,9 @@ public final class RenamePanel extends JPanel {
         } else {
             ((CardLayout) originalCard.getLayout()).show(originalCard, "list");
         }
-        // FileBot: New Names stays empty until Match produces a pairing
+        // New Names stays empty until Match produces a pairing
         ((CardLayout) namesCard.getLayout()).show(namesCard, hasMatched() ? "list" : "empty");
-        // FileBot's Rename is always live once files are loaded; its no-op guard reports instead
+        // Rename is always live once files are loaded; the no-op guard reports instead
         renameButton.setEnabled(!rows.isEmpty());
     }
 
@@ -637,7 +637,7 @@ public final class RenamePanel extends JPanel {
         }.execute();
     }
 
-    /** Replace the row model with the preview, matched rows first (FileBot re-orders). */
+    /** Replace the row model with the preview, matched rows first. */
     private void applyPreview(List<RenameController.Row> preview) {
         rows.clear();
         List<RenameController.Row> ordered = new java.util.ArrayList<>(preview);
@@ -649,7 +649,7 @@ public final class RenamePanel extends JPanel {
         updateEmptyState();
     }
 
-    /** FileBot's New Names shows the matched display name ("Up (2009)"), not the file name. */
+    /** New Names shows the matched display name ("Up (2009)"), not the file name. */
     private static String displayFor(RenameController.Row row) {
         if (row.status().equals(STATUS_NO_MATCH)) {
             return null;
@@ -660,7 +660,7 @@ public final class RenamePanel extends JPanel {
     }
 
     /**
-     * FileBot's Extension Preserve/Override: with Override a rendered name that
+     * Extension Preserve/Override: with Override a rendered name that
      * carries its own media extension wins; otherwise the source extension is kept.
      */
     private Path targetFor(String renderedName, Path source) {
@@ -721,11 +721,11 @@ public final class RenamePanel extends JPanel {
             }
         }
         if (planned.isEmpty()) {
-            // FileBot's no-op guard: Rename always runs and reports when nothing would change
+            // No-op guard: Rename always runs and reports when nothing would change
             statusLabel.setText("Files and Names are already optimally aligned.");
             return;
         }
-        // FileBot executes immediately: no confirm dialog
+        // Rename executes immediately: no confirm dialog
         renameButton.setEnabled(false);
         statusLabel.setText("running…");
         TransferAction action = TransferAction.valueOf(actionControl.getSelected().toUpperCase(java.util.Locale.ROOT));
@@ -770,7 +770,7 @@ public final class RenamePanel extends JPanel {
                         }
                     }
                     statusLabel.setText(applied + " files renamed. Use `renami undo` to revert.");
-                    // FileBot's "Post Process" option: hand the freshly applied files to the Post-Process view
+                    // "Post Process" option: hand the freshly applied files to the Post-Process view
                     if (postProcessCheck.isSelected() && postProcessHandler != null) {
                         List<Path> moved = results.stream()
                                 .filter(RenameController.Row::applied)
@@ -813,7 +813,7 @@ public final class RenamePanel extends JPanel {
         updateEmptyState();
     }
 
-    /** Reorder the selection within the shared model — FileBot's Align Up/Down. */
+    /** Reorder the selection within the shared model — Align Up/Down. */
     private void moveSelected(int delta) {
         int[] indices = originalList.getSelectedIndices();
         if (indices.length == 0) {
@@ -854,7 +854,7 @@ public final class RenamePanel extends JPanel {
     }
 
     // ============================================================
-    // popups (FileBot's per-list tool strips)
+    // popups (per-list tool strips)
     // ============================================================
 
     private JPopupMenu buildClearPopup() {
@@ -917,7 +917,7 @@ public final class RenamePanel extends JPanel {
         setNamesFromText(text);
     }
 
-    /** Map text lines onto selected (or all) rows, in order — FileBot's Load Names. */
+    /** Map text lines onto selected (or all) rows, in order — Load Names. */
     private void setNamesFromText(String text) {
         List<String> lines = new java.util.ArrayList<>();
         for (String line : text.split("\\R")) {
@@ -987,7 +987,7 @@ public final class RenamePanel extends JPanel {
         return menu;
     }
 
-    /** FileBot's Fetch & Match Data popup: branded datasources per mode + options. */
+    /** Fetch & Match Data popup: branded datasources per mode + options. */
     private JPopupMenu buildFetchPopup() {
         JPopupMenu menu = new JPopupMenu();
         menu.add(groupLabel("Episode Mode"));
@@ -1024,7 +1024,7 @@ public final class RenamePanel extends JPanel {
         match();
     }
 
-    /** Menu row with the provider's brand dot, like FileBot's datasource icons. */
+    /** Menu row with the provider's brand dot. */
     private static JMenuItem brandedItem(String label, String hex, Runnable action) {
         JMenuItem item = new JMenuItem(label);
         item.setIcon(dotIcon(hex));
@@ -1065,7 +1065,7 @@ public final class RenamePanel extends JPanel {
         };
     }
 
-    /** FileBot's History dialog: the journal browser lives in a toolbar dialog, not the rail. */
+    /** History dialog: the journal browser lives in a toolbar dialog, not the rail. */
     private void showHistoryDialog() {
         Window owner = SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(owner instanceof Frame f ? f : null, "History", true);
@@ -1159,7 +1159,7 @@ public final class RenamePanel extends JPanel {
         }
     }
 
-    /** FileBot's "Edit Match": pick a different movie/show from the datasource. */
+    /** "Edit Match": pick a different movie/show from the datasource. */
     private void editMatch() {
         Pair pair = selected(namesList);
         if (pair == null) {
@@ -1257,7 +1257,7 @@ public final class RenamePanel extends JPanel {
         statusLabel.setText("match changed to " + chosen[1]);
     }
 
-    /** FileBot's "Rename…" on the Original Files list: rename the file on disk now. */
+    /** "Rename…" on the Original Files list: rename the file on disk now. */
     private void renameFileDirect(Path file) {
         String current = file.getFileName().toString();
         String input = JOptionPane.showInputDialog(this, "Rename file on disk:", current);
@@ -1285,7 +1285,7 @@ public final class RenamePanel extends JPanel {
         }
     }
 
-    /** FileBot's "Move to Trash" on the Original Files list. */
+    /** "Move to Trash" on the Original Files list. */
     private void moveToTrash(Path file) {
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Move " + file.getFileName() + " to the Trash?", "Move to Trash",
@@ -1312,7 +1312,7 @@ public final class RenamePanel extends JPanel {
         }
     }
 
-    /** FileBot's "Load from Directory Index": names come from the files in a folder. */
+    /** "Load from Directory Index": names come from the files in a folder. */
     private void loadNamesFromDirectoryIndex() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -1355,7 +1355,7 @@ public final class RenamePanel extends JPanel {
     }
 
     // ============================================================
-    // Edit Format dialog (FileBot's FormatDialog)
+    // Edit Format dialog
     // ============================================================
 
     private void editFormat() {
@@ -1456,7 +1456,7 @@ public final class RenamePanel extends JPanel {
         } catch (Exception ignored) {
             // fall through to defaults
         }
-        // FileBot's 14 example presets + a Jellyfin favourite, adapted to Renami formats
+        // The 14 example presets + a Jellyfin favourite, adapted to Renami formats
         return List.of(
                 Map.of("name", "Organize Movies for Jellyfin", "format", "{n} ({y})/{n} ({y})"),
                 Map.of("name", "Organize Episodes for Jellyfin", "format", "{n}/Season {s}/{n} - {s00e00} - {t}"),
@@ -1475,7 +1475,7 @@ public final class RenamePanel extends JPanel {
                 Map.of("name", "Jellyfin Movies", "format", "{n} ({y})/{n} ({y})"));
     }
 
-    /** F1–F12 apply presets 1–12, exactly like FileBot. */
+    /** F1–F12 apply presets 1–12. */
     private void installPresetKeys() {
         InputMap keys = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         ActionMap actions = getActionMap();

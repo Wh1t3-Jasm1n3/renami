@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * FileBot's Episodes mode: search a series on TheTVDB/TMDb, browse a season's
+ * Episodes mode: search a series on TheTVDB/TMDb, browse a season's
  * episode list, then copy the names or hand them to the Rename view.
  */
 final class EpisodesPanel extends JPanel {
@@ -146,7 +146,7 @@ final class EpisodesPanel extends JPanel {
             }
         });
 
-        // FileBot's episode row context menu: Send to / Copy / Save / Select All / Delete
+        // Episode row context menu: Send to / Copy / Save / Select All / Delete
         episodesTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mousePressed(java.awt.event.MouseEvent e) {
@@ -202,7 +202,7 @@ final class EpisodesPanel extends JPanel {
         return item;
     }
 
-    /** FileBot's Save button: export the episode list to a text file. */
+    /** Save button: export the episode list to a text file. */
     private void saveNames() {
         String text = namesJoined();
         if (text.isEmpty()) {

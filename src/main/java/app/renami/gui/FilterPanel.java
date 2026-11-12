@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 /**
- * FileBot's Filter mode: pick a folder, narrow it by type or a Groovy
+ * Filter mode: pick a folder, narrow it by type or a Groovy
  * predicate, then hand the selection to the Rename view.
  */
 final class FilterPanel extends JPanel {
