@@ -102,10 +102,15 @@ tasks.processResources {
 }
 
 // macOS .app bundle (mirrors how commercial Java media tools ship a native-looking app)
+// Sign with a Developer ID when one is in the keychain (override with -PsignKey="..." or -PskipSign).
+val signingKey = (project.findProperty("signKey") as String?)
+    ?: "Developer ID Application: Henry Ling (H24BG2G8YU)"
+val skipSign = project.hasProperty("skipSign")
+
 val jpackageApp = tasks.register<Exec>("jpackageApp") {
     dependsOn("installDist", appIcon)
     group = "distribution"
-    description = "Build Renami.app via jpackage (app-image, unsigned)."
+    description = "Build Renami.app via jpackage (app-image, Developer ID signed when available)."
 
     val libDir = layout.buildDirectory.dir("install/renami/lib").get().asFile
     val outDir = layout.buildDirectory.dir("jpackage").get().asFile
@@ -113,7 +118,7 @@ val jpackageApp = tasks.register<Exec>("jpackageApp") {
     doFirst { outDir.deleteRecursively() }
     // macOS bundles reject versions starting with 0; strip the leading "0." for the bundle only
     val bundleVersion = project.version.toString().removePrefix("0.")
-    commandLine(
+    val args = mutableListOf(
         jdkBin("jpackage"),
         "--type", "app-image",
         "--name", "Renami",
@@ -128,4 +133,56 @@ val jpackageApp = tasks.register<Exec>("jpackageApp") {
         "--icon", icnsFile.absolutePath,
         "--file-associations", file("$rootDir/packaging/file-associations.properties").absolutePath
     )
+    if (!skipSign) {
+        args += listOf("--mac-sign", "--mac-signing-key-user-name", signingKey)
+    }
+    commandLine(args)
+}
+
+// ---------------------------------------------------------------------------
+// Release artifacts: .app zip, dmg installer, CLI zip
+// ---------------------------------------------------------------------------
+val version = project.version.toString()
+
+val appZip = tasks.register<Exec>("appZip") {
+    group = "distribution"
+    description = "Renami-$version-macos.zip — the signed .app bundle (symlinks + exec bits kept)."
+    dependsOn(jpackageApp)
+    val outDir = layout.buildDirectory.dir("artifacts").get().asFile
+    val src = layout.buildDirectory.dir("jpackage").get().asFile
+    doFirst { outDir.mkdirs() }
+    workingDir = src
+    commandLine("zip", "-ryq", File(outDir, "Renami-$version-macos.zip").absolutePath, "Renami.app")
+}
+
+val dmg = tasks.register<Exec>("dmg") {
+    group = "distribution"
+    description = "Renami-$version.dmg — drag-to-Applications installer image."
+    dependsOn(jpackageApp)
+    onlyIf { org.gradle.internal.os.OperatingSystem.current().isMacOsX }
+    val outDir = layout.buildDirectory.dir("artifacts").get().asFile
+    val appImage = layout.buildDirectory.dir("jpackage/Renami.app").get().asFile
+    commandLine(
+        jdkBin("jpackage"),
+        "--type", "dmg",
+        "--name", "Renami",
+        "--app-version", project.version.toString().removePrefix("0."),
+        "--app-image", appImage.absolutePath,
+        "--dest", outDir.absolutePath
+    )
+}
+
+val cliZip = tasks.register<Zip>("cliZip") {
+    group = "distribution"
+    description = "renami-$version-cli.zip — installDist output (needs JDK 21+)."
+    dependsOn("installDist")
+    archiveFileName.set("renami-$version-cli.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("artifacts"))
+    from(layout.buildDirectory.dir("install/renami"))
+}
+
+val releaseArtifacts = tasks.register("releaseArtifacts") {
+    group = "distribution"
+    description = "Build every GitHub-release asset: app zip, dmg, CLI zip."
+    dependsOn(appZip, dmg, cliZip)
 }

@@ -16,9 +16,10 @@ expression templates. Undo anything, anytime.
 
 Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
 
-- **Renami-1.5.0-macos.zip** — native macOS app with bundled Java runtime. Unsigned, so first
-  launch: right-click → Open.
-- **renami-1.5.0-cli.zip** — command line (requires JDK 21+), or build from source below.
+- **Renami-1.6.0-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed;
+  if Gatekeeper still complains (build not notarized), right-click → Open.
+- **Renami-1.6.0.dmg** — the same app in a disk-image installer (drag to Applications).
+- **renami-1.6.0-cli.zip** — command line (requires JDK 21+), or build from source below.
 
 ## The desktop app
 
@@ -145,7 +146,8 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 1.3 | GUI history view, dark theme, subtitle search parity | ✅ |
 | 1.4 | 2026-macOS redesign (sidebar chrome, SF Pro, accent, dark mode) + GUI-first Post-Process, Watch and Checksum views | ✅ |
 | 1.5 | FileBot-parity Rename view: Original Files / New Names dual panels, per-list tool strips, center Match/Rename column, Edit Format dialog, presets | ✅ |
-| 1.6 | Key-free datasources (TVmaze + auto fallback chain), FileBot-style API-key panel with Get key/Test, first-run setup | 🚧 |
+| 1.6 | Key-free datasources (TVmaze + auto fallback chain), FileBot-style API-key panel with Get key/Test, first-run setup, full FileBot customer-journey parity (Load → Match → Rename → History → Undo) | ✅ |
+| 1.7 | In-app auto-update (GUI + CLI), full-screen TUI (Lanterna) with all modes as tabs | 🚧 |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
