@@ -62,6 +62,12 @@ public class KitsuClient implements Datasource {
         return "Kitsu";
     }
 
+    /** Kitsu's catalogue is anime only: keep it out of live-action movie searches. */
+    @Override
+    public boolean animeOnly() {
+        return true;
+    }
+
     @Override
     public List<ShowInfo> searchShow(String query, int year) throws IOException {
         JsonObject json = http.get(BASE + "/anime?" + TEXT_FILTER + "=" + encode(query)

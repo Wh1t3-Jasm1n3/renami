@@ -69,6 +69,9 @@ public final class FallbackDatasource implements Datasource {
     public List<MovieInfo> searchMovie(String query, int year) throws IOException {
         IOException firstFailure = null;
         for (Datasource datasource : chain) {
+            if (datasource.animeOnly()) {
+                continue; // anime databases answer with false matches for live-action movies
+            }
             try {
                 List<MovieInfo> hits = datasource.searchMovie(query, year);
                 if (!hits.isEmpty()) {

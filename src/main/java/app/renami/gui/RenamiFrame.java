@@ -19,6 +19,7 @@ public final class RenamiFrame extends JFrame {
     private final DupePanel dupePanel = new DupePanel();
     private final ChecksumPanel checksumPanel = new ChecksumPanel();
     private final HistoryPanel historyPanel = new HistoryPanel();
+    private final ListPanel listPanel = new ListPanel();
     private final java.util.Map<String, JButton> primaryButtons = new java.util.HashMap<>();
     private JPanel content;
     private Sidebar sidebar;
@@ -44,6 +45,7 @@ public final class RenamiFrame extends JFrame {
             case "subtitles" -> subtitlesPanel.acceptFiles(files);
             case "postprocess" -> postProcessPanel.preload(files);
             case "duplicates" -> dupePanel.acceptFiles(files);
+            case "list" -> listPanel.acceptFiles(files);
             default -> { }
         }
     }
@@ -69,6 +71,7 @@ public final class RenamiFrame extends JFrame {
         content.add(dupePanel, "duplicates");
         content.add(checksumPanel, "checksum");
         content.add(historyPanel, "history");
+        content.add(listPanel, "list");
 
         // each view's primary action becomes the Return-key default button
         primaryButtons.putAll(java.util.Map.of(
@@ -80,21 +83,30 @@ public final class RenamiFrame extends JFrame {
                 "filter", filterPanel.scanButton(),
                 "duplicates", dupePanel.findButton(),
                 "checksum", checksumPanel.generateButton(),
-                "history", historyPanel.undoButton()));
+                "history", historyPanel.undoButton(),
+                "list", listPanel.runButton()));
 
-        // FileBot's rail set stays on the rail; our extra views live behind "More"
+        // FileBot's rail set (Rename/Episodes/Subtitles/SFV/Filter/List) stays on the
+        // rail; History is a toolbar dialog in FileBot, so it lives behind "More" here
         sidebar = new Sidebar(
                 List.of(new Sidebar.Item("rename", "Rename", "rename", "#0A84FF"),
                         new Sidebar.Item("episodes", "Episodes", "episodes", "#BF5AF2"),
                         new Sidebar.Item("subtitles", "Subtitles", "subtitles", "#5E5CE6"),
+                        new Sidebar.Item("checksum", "SFV", "checksum", "#30D158"),
                         new Sidebar.Item("filter", "Filter", "filter", "#FF9F0A"),
-                        new Sidebar.Item("checksum", "Checksum", "checksum", "#30D158"),
-                        new Sidebar.Item("history", "History", "history", "#64D2FF")),
+                        new Sidebar.Item("list", "List", "list", "#64D2FF")),
                 List.of(new Sidebar.Item("postprocess", "Post-Process", "postprocess", "#FF6B6B"),
                         new Sidebar.Item("watch", "Watch", "watch", "#32D74B"),
-                        new Sidebar.Item("duplicates", "Duplicates", "duplicates", "#FFB340")),
+                        new Sidebar.Item("duplicates", "Duplicates", "duplicates", "#FFB340"),
+                        new Sidebar.Item("history", "History", "history", "#64D2FF")),
                 this::showView,
                 this::transferFiles);
+
+        // FileBot's Post Process option: renamed files flow straight into the Post-Process view
+        renamePanel.setPostProcessHandler(files -> {
+            postProcessPanel.preload(files);
+            showView("postprocess");
+        });
 
         add(sidebar, BorderLayout.WEST);
         add(content, BorderLayout.CENTER);
