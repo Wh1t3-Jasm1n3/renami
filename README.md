@@ -1,8 +1,7 @@
-<img src="docs/app-icon.png" alt="Renami app icon" width="128" align="left" hspace="40" vspace="8" />
+<p align="center">
+  <img src="docs/app-icon.png" alt="Renami app icon" width="128" />
+</p>
 
-<br/>
-<br/>
-<br/>
 <br/>
 <br/>
 
