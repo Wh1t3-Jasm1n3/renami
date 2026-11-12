@@ -81,7 +81,11 @@ public final class Updater {
             Files.move(old, targetApp); // roll back so the user is never left without an app
             throw failure;
         }
-        deleteTree(old);
+        try {
+            deleteTree(old);
+        } catch (IOException stale) {
+            // the update is already in place; a leftover old copy must not fail the install
+        }
     }
 
     static void copyTree(Path from, Path to) throws IOException {
@@ -145,14 +149,20 @@ public final class Updater {
     }
 
     /**
-     * Relaunches the updated bundle through LaunchServices, then exits this process.
-     * The open is deferred by a detached shell: calling it while the old instance is
-     * still alive just activates the dying process, and the new one never appears.
+     * Spawns the relaunch helper BEFORE the bundle is swapped. Once the running app's
+     * own bundle has been replaced in place, this JVM can no longer spawn processes —
+     * its jspawnhelper was replaced mid-flight ("Failed to exec spawn helper") — so the
+     * helper must already be running. It waits for this process to exit, then reopens
+     * the updated bundle through LaunchServices; opening while the old instance is
+     * alive would just activate the dying process. Destroy the returned process to
+     * cancel (e.g. when the install fails).
      */
-    public static void restart(Path appPath) throws IOException {
-        new ProcessBuilder("/bin/sh", "-c",
-                "sleep 1; open " + shellQuote(appPath.toString())).start();
-        System.exit(0);
+    public static Process scheduleRestart(Path appPath) throws IOException {
+        long pid = ProcessHandle.current().pid();
+        return new ProcessBuilder("/bin/sh", "-c",
+                "while kill -0 " + pid + " 2>/dev/null; do sleep 0.2; done; "
+                        + "open " + shellQuote(appPath.toString()))
+                .start();
     }
 
     private static String shellQuote(String s) {

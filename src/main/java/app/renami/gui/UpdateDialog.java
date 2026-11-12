@@ -119,9 +119,19 @@ public final class UpdateDialog {
     private static void installAndRestart(Component parent, Path app, UpdateInfo info) {
         JDialog progress = indeterminate(parent, "Downloading Renami " + info.latest() + "…");
         SwingWorker<Path, Void> worker = new SwingWorker<>() {
+            private Process relaunch;
+
             @Override
             protected Path doInBackground() throws Exception {
-                return Updater.install(info.appZipUrl(), app);
+                // must be spawned before the swap: the JVM cannot spawn processes from a
+                // bundle it has just replaced under itself
+                relaunch = Updater.scheduleRestart(app);
+                try {
+                    return Updater.install(info.appZipUrl(), app);
+                } catch (Exception failure) {
+                    relaunch.destroy(); // cancel the pending relaunch; the old app stays
+                    throw failure;
+                }
             }
 
             @Override
@@ -133,7 +143,7 @@ public final class UpdateDialog {
                             "Renami " + info.latest() + " was installed at " + updated
                                     + ".\n\nRenami will now restart.",
                             "Update installed", JOptionPane.INFORMATION_MESSAGE);
-                    Updater.restart(updated);
+                    System.exit(0); // the scheduled helper reopens the updated bundle
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(parent,
                             "The update failed and your current version was left in place: "
