@@ -16,10 +16,10 @@ expression templates. Undo anything, anytime.
 
 Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
 
-- **Renami-1.6.2-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed;
+- **Renami-1.7.0-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed;
   if Gatekeeper still complains (build not notarized), right-click → Open.
-- **Renami-1.6.2.dmg** — the same app in a disk-image installer (drag to Applications).
-- **renami-1.6.2-cli.zip** — command line (requires JDK 21+), or build from source below.
+- **Renami-1.7.0.dmg** — the same app in a disk-image installer (drag to Applications).
+- **renami-1.7.0-cli.zip** — command line (requires JDK 21+), or build from source below.
 
 Already installed? Renami checks GitHub on launch and offers **Update & Restart** in one click —
 or run `renami update` from the terminal.
@@ -67,6 +67,7 @@ $BIN dupe /path/to/media
 $BIN checksum /path/to/media --write checksums.sfv
 $BIN undo
 $BIN gui                           # open the desktop app from the terminal
+$BIN tui                           # full-screen terminal UI — every mode is a tab
 ```
 
 No API key? **TV shows work out of the box** — `--db auto` tries the keyed providers you
@@ -151,7 +152,7 @@ gradle jpackageApp    # macOS Renami.app (unsigned app-image) in build/jpackage
 | 1.5 | FileBot-parity Rename view: Original Files / New Names dual panels, per-list tool strips, center Match/Rename column, Edit Format dialog, presets | ✅ |
 | 1.6 | Key-free datasources (TVmaze + auto fallback chain), FileBot-style API-key panel with Get key/Test, first-run setup, full FileBot customer-journey parity (Load → Match → Rename → History → Undo) | ✅ |
 | 1.6.1 | Auto-update: startup version check, one-click Update & Restart in the GUI, `renami update` CLI | ✅ |
-| 1.7 | Full-screen TUI (Lanterna) with all modes as tabs | 🚧 |
+| 1.7 | Full-screen TUI (Lanterna) with all modes as tabs | ✅ |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
