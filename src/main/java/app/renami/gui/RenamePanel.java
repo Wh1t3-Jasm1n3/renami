@@ -117,10 +117,12 @@ public final class RenamePanel extends JPanel {
 
         add(buildBottomBar(), BorderLayout.SOUTH);
 
-        matchButton.addActionListener(e -> match());
+        // FileBot: the Match button opens the Fetch & Match Data popup, it does not match directly
+        matchButton.addActionListener(e ->
+                buildFetchPopup().show(matchButton, 0, matchButton.getHeight()));
         renameButton.addActionListener(e -> rename());
         renameButton.setEnabled(false);
-        // FileBot: right-click Match → Fetch popup, right-click Rename → Settings popup
+        // FileBot: right-click Rename → Settings popup
         matchButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -419,15 +421,36 @@ public final class RenamePanel extends JPanel {
             add(partner);
         }
 
+        /** FileBot hides unmatched rows from New Names: a zero-height cell keeps the shared model aligned. */
+        private static final JComponent HIDDEN_CELL = new JPanel() {
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(0, 0);
+            }
+        };
+
+        /** FileBot's label: the file name without its extension — the badge already carries it. */
+        private static String baseName(Path file) {
+            String name = file.getFileName().toString();
+            int dot = name.lastIndexOf('.');
+            return dot > 0 ? name.substring(0, dot) : name;
+        }
+
         @Override
         public Component getListCellRendererComponent(JList<? extends Pair> list, Pair pair, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
+            // FileBot: New Names stays empty until a file is matched
+            if (!showSource && pair.status().equals(STATUS_NO_MATCH)) {
+                return HIDDEN_CELL;
+            }
             Path shown = showSource ? pair.source() : pair.target();
             Path other = showSource ? pair.target() : pair.source();
             // FileBot: the New Names list shows the matched display name, not the file name
             name.setText(!showSource && pair.display() != null
-                    ? pair.display() : shown.getFileName().toString());
-            partner.setText(other.getFileName().toString());
+                    ? pair.display() : baseName(shown));
+            String partnerText = showSource && pair.display() != null
+                    ? pair.display() : baseName(other);
+            partner.setText(partnerText.equals(name.getText()) ? "" : partnerText);
             String ext = MediaScanner.extension(shown);
             badge.setText(ext.isEmpty() ? "" : ext.toLowerCase(java.util.Locale.ROOT));
 
@@ -437,7 +460,7 @@ public final class RenamePanel extends JPanel {
                 name.setForeground(switch (pair.status()) {
                     case STATUS_RENAME -> new Color(0x30, 0xB0, 0x60);
                     case STATUS_UNCHANGED -> muted;
-                    case STATUS_NO_MATCH -> new Color(0xE0, 0x4A, 0x4A);
+                    // FileBot: unmatched rows stay plain — red is reserved for conflicts
                     default -> fg;
                 });
                 partner.setForeground(muted);
@@ -514,12 +537,22 @@ public final class RenamePanel extends JPanel {
     private void updateEmptyState() {
         if (rows.isEmpty()) {
             ((CardLayout) originalCard.getLayout()).show(originalCard, "empty");
-            ((CardLayout) namesCard.getLayout()).show(namesCard, "empty");
         } else {
             ((CardLayout) originalCard.getLayout()).show(originalCard, "list");
-            ((CardLayout) namesCard.getLayout()).show(namesCard, "list");
         }
-        renameButton.setEnabled(!rows.isEmpty() && hasPlanned());
+        // FileBot: New Names stays empty until Match produces a pairing
+        ((CardLayout) namesCard.getLayout()).show(namesCard, hasMatched() ? "list" : "empty");
+        // FileBot's Rename is always live once files are loaded; its no-op guard reports instead
+        renameButton.setEnabled(!rows.isEmpty());
+    }
+
+    private boolean hasMatched() {
+        for (int i = 0; i < rows.size(); i++) {
+            if (!rows.get(i).status().equals(STATUS_NO_MATCH)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private JComponent buildNamesPlaceholder() {
@@ -558,15 +591,6 @@ public final class RenamePanel extends JPanel {
     // ============================================================
     // Match → preview rows; Rename → apply
     // ============================================================
-
-    private boolean hasPlanned() {
-        for (int i = 0; i < rows.size(); i++) {
-            if (rows.get(i).status().equals(STATUS_RENAME)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     private RenameService.Options options() {
         return new RenameService.Options(modeControl.getSelected(), format,
@@ -607,7 +631,7 @@ public final class RenamePanel extends JPanel {
                             "Match failed", JOptionPane.ERROR_MESSAGE);
                 } finally {
                     matchButton.setEnabled(true);
-                    renameButton.setEnabled(hasPlanned());
+                    renameButton.setEnabled(!rows.isEmpty());
                 }
             }
         }.execute();
@@ -666,7 +690,7 @@ public final class RenamePanel extends JPanel {
             rows.set(i, new Pair(pair.source(), target,
                     target.equals(pair.source()) ? STATUS_UNCHANGED : STATUS_RENAME, name));
         }
-        renameButton.setEnabled(hasPlanned());
+        renameButton.setEnabled(!rows.isEmpty());
         statusLabel.setText("format applied to " + lastVars.size() + " matches");
     }
 
@@ -697,13 +721,11 @@ public final class RenamePanel extends JPanel {
             }
         }
         if (planned.isEmpty()) {
+            // FileBot's no-op guard: Rename always runs and reports when nothing would change
+            statusLabel.setText("Files and Names are already optimally aligned.");
             return;
         }
-        int confirmed = JOptionPane.showConfirmDialog(this,
-                "Execute " + planned.size() + " renames?", "Confirm rename", JOptionPane.YES_NO_OPTION);
-        if (confirmed != JOptionPane.YES_OPTION) {
-            return;
-        }
+        // FileBot executes immediately: no confirm dialog
         renameButton.setEnabled(false);
         statusLabel.setText("running…");
         TransferAction action = TransferAction.valueOf(actionControl.getSelected().toUpperCase(java.util.Locale.ROOT));
@@ -919,7 +941,7 @@ public final class RenamePanel extends JPanel {
                     target.equals(pair.source()) ? STATUS_UNCHANGED : STATUS_RENAME, name));
             applied++;
         }
-        renameButton.setEnabled(hasPlanned());
+        renameButton.setEnabled(!rows.isEmpty());
         statusLabel.setText(applied + " names loaded");
     }
 
@@ -1133,7 +1155,7 @@ public final class RenamePanel extends JPanel {
             rows.set(index, new Pair(pair.source(), target,
                     target.equals(pair.source()) ? STATUS_UNCHANGED : STATUS_RENAME,
                     dot > 0 ? shown.substring(0, dot) : shown));
-            renameButton.setEnabled(hasPlanned());
+            renameButton.setEnabled(!rows.isEmpty());
         }
     }
 
@@ -1230,7 +1252,7 @@ public final class RenamePanel extends JPanel {
             Map<Path, Map<String, Object>> updated = new java.util.LinkedHashMap<>(lastVars);
             updated.put(source, vars);
             lastVars = updated;
-            renameButton.setEnabled(hasPlanned());
+            renameButton.setEnabled(!rows.isEmpty());
         }
         statusLabel.setText("match changed to " + chosen[1]);
     }
@@ -1255,7 +1277,7 @@ public final class RenamePanel extends JPanel {
                 Path newTarget = pair.target().equals(file) ? target : pair.target();
                 rows.set(index, new Pair(target, newTarget,
                         newTarget.equals(target) ? STATUS_UNCHANGED : STATUS_RENAME));
-                renameButton.setEnabled(hasPlanned());
+                renameButton.setEnabled(!rows.isEmpty());
             }
             statusLabel.setText("renamed " + current);
         } catch (Exception e) {
@@ -1282,7 +1304,7 @@ public final class RenamePanel extends JPanel {
             int index = indexOfSource(file);
             if (index >= 0) {
                 rows.remove(index);
-                renameButton.setEnabled(hasPlanned());
+                renameButton.setEnabled(!rows.isEmpty());
             }
             statusLabel.setText("moved to Trash: " + file.getFileName());
         } catch (Exception e) {
@@ -1539,6 +1561,7 @@ public final class RenamePanel extends JPanel {
         JButton button = new JButton(Ui.icon(icon, 18));
         button.setToolTipText(tooltip);
         button.setMargin(new Insets(4, 4, 4, 4));
+        button.addActionListener(action);
         return button;
     }
 

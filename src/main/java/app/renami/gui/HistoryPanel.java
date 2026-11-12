@@ -134,8 +134,9 @@ public final class HistoryPanel extends JPanel {
             protected void done() {
                 try {
                     HistoryController.UndoReport report = get();
-                    statusLabel.setText(report.restored() + " of " + report.total() + " files restored");
+                    // refresh() resets the status line, so report the outcome after it
                     refresh();
+                    statusLabel.setText(report.restored() + " of " + report.total() + " files restored");
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                     statusLabel.setText("undo failed");
