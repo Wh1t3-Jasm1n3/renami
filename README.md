@@ -6,10 +6,11 @@
 
 # Renami
 
-**Renami** is an open-source media file renamer and organizer for macOS. Point it at a folder
-of movies or TV episodes (archives included), and it matches each file against online metadata
-databases, scores the candidates with a fuzzy-matching engine, and renames/moves them into a
-clean library using expression templates. Undo anything, anytime.
+**Renami** is an open-source media file renamer and organizer for macOS — the open-source
+renamer for your media-server library. Point it at a folder of movies or TV episodes
+(archives included), and it matches each file against online metadata databases, scores
+the candidates with a fuzzy-matching engine, and renames/moves them into a clean library
+using expression templates. Undo anything, anytime.
 
 ## Download
 
@@ -173,6 +174,10 @@ gradle releaseArtifacts  # signed + notarized zip/dmg/CLI zips in build/artifact
 | 1.6.1 | Auto-update: startup version check, one-click Update & Restart in the GUI, `renami update` CLI | ✅ |
 | 1.7 | Full-screen TUI (Lanterna) with all modes as tabs | ✅ |
 | 1.7.0 | dmg installer, Developer ID signing + Apple notarization (Gatekeeper-clean out of the box) | ✅ |
+| 1.8 | Windows build: jpackage MSI/exe — GUI, CLI and TUI verified on Windows | 🔜 planned |
+| 1.9 | Homebrew: CLI formula + notarized cask — `brew install renami` | 🔜 planned |
+| 2.0 | Media-server mode: write Plex/Emby/Jellyfin metadata (xattr + NFO sidecars) when renaming/post-processing — the open-source renamer for media-server libraries | 🔜 planned |
+| 2.1 | Advanced Renamer feature study: port the best rule/tag-based renaming ideas into the format engine | 🔜 planned |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map.
 
