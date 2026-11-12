@@ -12,6 +12,7 @@ import app.renami.cli.RenameCommand;
 import app.renami.cli.SubtitlesCommand;
 import app.renami.cli.TrackCommand;
 import app.renami.cli.UndoCommand;
+import app.renami.cli.UpdateCommand;
 import app.renami.cli.WatchCommand;
 import app.renami.gui.RenamiFrame;
 import picocli.CommandLine;
@@ -30,7 +31,7 @@ import java.util.concurrent.Callable;
         subcommands = {RenameCommand.class, UndoCommand.class, ProbeCommand.class,
                 ChecksumCommand.class, DupeCommand.class, ExtractCommand.class, ListCommand.class,
                 FilterCommand.class, PostProcessCommand.class, GuiCommand.class, SubtitlesCommand.class,
-                TrackCommand.class, WatchCommand.class}
+                TrackCommand.class, WatchCommand.class, UpdateCommand.class}
 )
 public final class Main implements Callable<Integer> {
 

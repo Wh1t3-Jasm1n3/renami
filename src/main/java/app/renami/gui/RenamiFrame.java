@@ -135,7 +135,9 @@ public final class RenamiFrame extends JFrame {
         help.add(menuLink("Report Bugs", "https://github.com/Wh1t3-Jasm1n3/renami/issues"));
         help.add(menuLink("Request Help", "https://github.com/Wh1t3-Jasm1n3/renami/discussions"));
         help.addSeparator();
-        help.add(menuLink("Check for Updates", "https://github.com/Wh1t3-Jasm1n3/renami/releases"));
+        JMenuItem updates = new JMenuItem("Check for Updates…");
+        updates.addActionListener(e -> UpdateDialog.checkInteractively(this));
+        help.add(updates);
         bar.add(help);
         setJMenuBar(bar);
     }
@@ -146,7 +148,7 @@ public final class RenamiFrame extends JFrame {
         return item;
     }
 
-    private static void openUrl(String url) {
+    static void openUrl(String url) {
         try {
             java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
         } catch (Exception ex) {
@@ -197,6 +199,8 @@ public final class RenamiFrame extends JFrame {
             });
             frame.setVisible(true);
             ApiKeysDialog.setupIfUnconfigured(frame);
+            // FileBot-style startup version check (Help ▸ Check for Updates does the manual one)
+            UpdateDialog.checkOnStartup(frame);
         });
         try {
             latch.await();
