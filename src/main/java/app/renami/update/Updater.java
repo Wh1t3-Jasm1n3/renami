@@ -144,9 +144,18 @@ public final class Updater {
         }
     }
 
-    /** Relaunches the updated bundle through LaunchServices, then exits this process. */
+    /**
+     * Relaunches the updated bundle through LaunchServices, then exits this process.
+     * The open is deferred by a detached shell: calling it while the old instance is
+     * still alive just activates the dying process, and the new one never appears.
+     */
     public static void restart(Path appPath) throws IOException {
-        new ProcessBuilder("open", appPath.toString()).start();
+        new ProcessBuilder("/bin/sh", "-c",
+                "sleep 1; open " + shellQuote(appPath.toString())).start();
         System.exit(0);
+    }
+
+    private static String shellQuote(String s) {
+        return "'" + s.replace("'", "'\\''") + "'";
     }
 }

@@ -146,8 +146,10 @@ public final class UpdateDialog {
     }
 
     private static JDialog indeterminate(Component parent, String message) {
+        // modeless on purpose: setVisible(true) must return so the SwingWorker can start;
+        // done() disposes the dialog when the work finishes
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
-                "Renami", Dialog.ModalityType.APPLICATION_MODAL);
+                "Renami", Dialog.ModalityType.MODELESS);
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
         panel.add(new JLabel(message), BorderLayout.NORTH);
@@ -158,7 +160,7 @@ public final class UpdateDialog {
         dialog.pack();
         dialog.setLocationRelativeTo(parent);
         dialog.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        dialog.setVisible(true); // returns once dispose() runs on the EDT
+        dialog.setVisible(true);
         return dialog;
     }
 

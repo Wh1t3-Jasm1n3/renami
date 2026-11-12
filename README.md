@@ -16,10 +16,10 @@ expression templates. Undo anything, anytime.
 
 Grab the latest build from the [releases page](https://github.com/Wh1t3-Jasm1n3/renami/releases/latest):
 
-- **Renami-1.6.1-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed;
+- **Renami-1.6.2-macos.zip** — native macOS app with bundled Java runtime. Developer ID signed;
   if Gatekeeper still complains (build not notarized), right-click → Open.
-- **Renami-1.6.1.dmg** — the same app in a disk-image installer (drag to Applications).
-- **renami-1.6.1-cli.zip** — command line (requires JDK 21+), or build from source below.
+- **Renami-1.6.2.dmg** — the same app in a disk-image installer (drag to Applications).
+- **renami-1.6.2-cli.zip** — command line (requires JDK 21+), or build from source below.
 
 Already installed? Renami checks GitHub on launch and offers **Update & Restart** in one click —
 or run `renami update` from the terminal.
