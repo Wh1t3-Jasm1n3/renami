@@ -1,11 +1,23 @@
 // Generates packaging/AppIcon.iconset/*.png for the Renami macOS bundle.
-// Run: java tools/GenerateIcon.java   (then: iconutil -c icns packaging/AppIcon.iconset)
+// Run: java -Djava.awt.headless=true tools/GenerateIcon.java
+//      (then: iconutil -c icns packaging/AppIcon.iconset)
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import javax.imageio.ImageIO;
 
 public class GenerateIcon {
+
+    /**
+     * Apple's icon grid, measured from /System/Applications AppIcon.icns on macOS 26:
+     * the solid artwork bbox is 0.805 of the canvas, centered, with ~9.8% transparent
+     * padding on every side. macOS normalizes each icon's opaque shape to the Dock and
+     * Launchpad tile, so full-bleed artwork renders ~24% larger than every other icon.
+     */
+    private static final float SHAPE_RATIO = 0.80f;
+
+    /** Apple's corner radius as a fraction of the shape (measured: ~0.224). */
+    private static final float CORNER_FRACTION = 0.2237f;
 
     public static void main(String[] args) throws Exception {
         File dir = new File("packaging/AppIcon.iconset");
@@ -24,18 +36,19 @@ public class GenerateIcon {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        // Full-bleed SQUARE artwork: macOS 11+ masks every app icon into its own
-        // rounded-rect/squircle shape (macOS 26 forces it). Any margin or rounding in
-        // our artwork leaves gaps where the system material plate shows through as a
-        // gray frame — so the image must fill the entire canvas edge to edge.
-        float s = w;
-        float off = 0f;
+        // The shape sits at 80% of the canvas, centered — Apple's measured grid.
+        // Its own corner radius matches the system mask so no gray material plate
+        // shows between artwork and mask at any size.
+        float s = w * SHAPE_RATIO;
+        float off = (w - s) / 2f;
+        float radius = s * CORNER_FRACTION;
         Paint gradient = new GradientPaint(off, off, new Color(0x14, 0x6E, 0x64),
                 off + s, off + s, new Color(0x0B, 0x35, 0x5E));
         g.setPaint(gradient);
-        g.fillRect(0, 0, w, h);
+        g.fillRoundRect(Math.round(off), Math.round(off), Math.round(s), Math.round(s),
+                Math.round(radius * 2), Math.round(radius * 2));
 
-        // filmstrip motif along the left edge
+        // filmstrip motif along the left edge of the shape
         g.setColor(new Color(255, 255, 255, 46));
         int hole = Math.max(1, Math.round(s * 0.045f));
         int step = Math.max(hole * 2, Math.round(s / 6f));

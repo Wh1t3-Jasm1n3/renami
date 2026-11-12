@@ -144,9 +144,22 @@ public final class Ui {
 
     /** The primary action button: larger, and the frame's default (Return) button. */
     public static <T extends JButton> T prominent(T button) {
-        button.putClientProperty("JButton.buttonType", "prominent");
         button.putClientProperty("JComponent.sizeVariant", "large");
+        // FlatLaf 3 dropped the old "prominent" button type, so fill with the
+        // accent explicitly: same palette as the default (Return) button.
+        Color accent = accent();
+        button.putClientProperty("FlatLaf.style",
+                "background: " + hexString(accent)
+                        + "; hoverBackground: " + hexString(mix(accent, Color.WHITE, 0.15))
+                        + "; pressedBackground: " + hexString(mix(accent, Color.BLACK, 0.2))
+                        + "; selectedBackground: " + hexString(mix(accent, Color.BLACK, 0.2))
+                        + "; foreground: #ffffff; focusedBackground: " + hexString(accent)
+                        + "; focusedForeground: #ffffff");
         return button;
+    }
+
+    private static String hexString(Color c) {
+        return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
     }
 
     /** Small muted caption above a control. */

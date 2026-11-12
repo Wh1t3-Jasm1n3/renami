@@ -45,7 +45,6 @@ public final class SubtitlesPanel extends JPanel {
         super(new BorderLayout(0, 16));
         setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        add(Ui.header("Subtitles"), BorderLayout.NORTH);
 
         JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);

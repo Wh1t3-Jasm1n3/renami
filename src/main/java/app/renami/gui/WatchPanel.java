@@ -27,7 +27,7 @@ public final class WatchPanel extends JPanel {
     private final SegmentedControl modeControl = new SegmentedControl("auto", "movie", "episode", "local");
     private final SegmentedControl actionControl =
             new SegmentedControl("rename", "move", "copy", "hardlink", "symlink");
-    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "omdb", "kitsu", "local"});
+    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "omdb", "kitsu", "local"});
     private final JTextField formatField = new JTextField("{n} - {s00e00} - {t}", 22);
     private final JCheckBox companionCheck = new JCheckBox("Companions", true);
     private final JCheckBox dryRunCheck = new JCheckBox("Dry run", false);
@@ -44,7 +44,6 @@ public final class WatchPanel extends JPanel {
         super(new BorderLayout(0, 16));
         setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        add(Ui.header("Watch"), BorderLayout.NORTH);
 
         JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);

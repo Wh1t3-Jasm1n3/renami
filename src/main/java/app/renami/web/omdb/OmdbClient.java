@@ -1,7 +1,7 @@
 package app.renami.web.omdb;
 
 import app.renami.web.Datasource;
-import app.renami.web.HttpJson;
+import app.renami.web.JsonGet;
 import app.renami.web.model.EpisodeInfo;
 import app.renami.web.model.MovieInfo;
 import app.renami.web.model.ShowInfo;
@@ -24,10 +24,10 @@ public final class OmdbClient implements Datasource {
 
     private static final String BASE = "https://www.omdbapi.com";
 
-    private final HttpJson http;
+    private final JsonGet http;
     private final String apiKey;
 
-    public OmdbClient(String apiKey, HttpJson http) {
+    public OmdbClient(String apiKey, JsonGet http) {
         this.apiKey = apiKey;
         this.http = http;
     }

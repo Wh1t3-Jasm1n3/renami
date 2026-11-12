@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Metadata provider abstraction. Datasource ids are opaque strings because
- * providers use different id spaces (TMDb numeric, TVDB numeric, OMDb "tt…").
+ * providers use different id spaces (TMDb numeric, OMDb "tt…").
  */
 public interface Datasource {
 
@@ -38,7 +38,7 @@ public interface Datasource {
     /**
      * Resolve an absolute (anime-style) episode number to a concrete season/episode.
      * Datasources with their own absolute order answer from their episode list;
-     * providers without one can fall back to community mappings (see TheXEM).
+     * providers without one can fall back to community episode mappings.
      */
     default EpisodeInfo mapAbsoluteEpisode(String showId, int absolute) throws IOException {
         for (EpisodeInfo info : getSeason(showId, 1, "absolute")) {

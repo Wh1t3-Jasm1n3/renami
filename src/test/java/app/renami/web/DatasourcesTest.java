@@ -35,6 +35,15 @@ class DatasourcesTest {
     }
 
     @Test
+    void removedTvdbProviderPointsAtTheCurrentOptions() {
+        // Users whose old config or script still says --db tvdb get a helpful error, not a stack trace.
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> Datasources.create(Config.load(), "tvdb", true));
+        assertTrue(error.getMessage().contains("unknown datasource"), error.getMessage());
+        assertTrue(error.getMessage().contains("tmdb"), error.getMessage());
+    }
+
+    @Test
     void keyFreeProvidersAreAdvertised() {
         assertEquals(java.util.List.of("tvmaze", "kitsu", "local"), Datasources.keyFree());
     }

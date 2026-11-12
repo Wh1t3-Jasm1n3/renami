@@ -57,6 +57,11 @@ public final class RenamiTheme {
             } else {
                 FlatLightLaf.setup();
             }
+            // FlatLaf reserves a 16px checkmark column in every popup menu item, which
+            // leaves a phantom indent in our plain icon-less lists. Drop it; the radio
+            // theme menu keeps its own RadioButtonMenuItem.checkIcon and stays aligned.
+            UIManager.put("MenuItem.checkIcon", null);
+            UIManager.put("MenuItem.minimumIconSize", new java.awt.Dimension(0, 0));
         } catch (Throwable ignored) {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

@@ -167,7 +167,7 @@ class RenameCommandTest {
 
     @Test
     void absoluteFallbackViaMapAbsoluteEpisode() throws Exception {
-        // TVDB absolute order empty → community mapping (XEM) path answers via the datasource seam
+        // absolute order empty → community mapping path answers via the datasource seam
         Files.writeString(dir.resolve("[SubsPlease] Steins;Gate - 05 (1080p).mkv"), "x");
 
         RenameCommand rename = new RenameCommand() {

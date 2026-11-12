@@ -25,7 +25,7 @@ public final class PostProcessPanel extends JPanel {
     private final SegmentedControl modeControl = new SegmentedControl("auto", "movie", "episode", "local");
     private final SegmentedControl actionControl =
             new SegmentedControl("rename", "move", "copy", "hardlink", "symlink");
-    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "omdb", "kitsu", "local"});
+    private final JComboBox<String> dbBox = new JComboBox<>(new String[]{"auto", "tmdb", "omdb", "kitsu", "local"});
     private final JTextField tvFormatField = new JTextField("{n}/Season {s}/{n} - {s00e00} - {t}", 22);
     private final JTextField movieFormatField = new JTextField("{n} ({y})/{n} ({y})", 22);
     private final JTextField inputField = new JTextField(24);
@@ -55,7 +55,6 @@ public final class PostProcessPanel extends JPanel {
         super(new BorderLayout(0, 16));
         setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        add(Ui.header("Post-Process"), BorderLayout.NORTH);
 
         JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);

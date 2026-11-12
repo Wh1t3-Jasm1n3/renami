@@ -59,7 +59,7 @@ public final class RenamePanel extends JPanel {
     private final SegmentedControl extensionControl =
             new SegmentedControl("preserve", "override");
     private final JComboBox<String> dbBox =
-            new JComboBox<>(new String[]{"auto", "tmdb", "tvdb", "tvmaze", "omdb", "kitsu", "local"});
+            new JComboBox<>(new String[]{"auto", "tmdb", "tvmaze", "omdb", "kitsu", "local"});
     private final JSpinner minScoreSpinner =
             new JSpinner(new SpinnerNumberModel(0.60, 0.0, 1.0, 0.05));
     private final JCheckBox companionCheck = new JCheckBox("Rename companion files", true);
@@ -95,13 +95,6 @@ public final class RenamePanel extends JPanel {
     public RenamePanel() {
         super(new BorderLayout(0, 14));
         setBorder(BorderFactory.createEmptyBorder(18, 22, 14, 22));
-
-        JPanel titleBar = new JPanel(new BorderLayout());
-        titleBar.setOpaque(false);
-        JLabel title = Ui.header("Rename");
-        title.setHorizontalAlignment(SwingConstants.CENTER);
-        titleBar.add(title, BorderLayout.CENTER);
-        add(titleBar, BorderLayout.NORTH);
 
         JPanel panels = new JPanel(new GridBagLayout());
         panels.setOpaque(false);
@@ -139,7 +132,6 @@ public final class RenamePanel extends JPanel {
                 }
             }
         });
-        installPresetKeys();
 
         installListBehavior();
         updateEmptyState();
@@ -393,32 +385,29 @@ public final class RenamePanel extends JPanel {
         }
     }
 
-    /** Two-line cell: name + extension badge on top, the pairing partner underneath. */
-    private static final class PairRenderer extends Box implements ListCellRenderer<Pair> {
+    /** One clean line per row: the name, and its extension as a quiet pill at the edge. */
+    private static final class PairRenderer extends JPanel implements ListCellRenderer<Pair> {
         private final JLabel name = new JLabel();
         private final JLabel badge = new Badge();
-        private final JLabel partner = new JLabel();
         private final boolean showSource;
 
         PairRenderer(boolean showSource) {
-            super(BoxLayout.Y_AXIS);
+            super(new BorderLayout(8, 0));
             this.showSource = showSource;
-            setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+            setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
             setOpaque(true);
-            name.setFont(Ui.title(13f));
-            partner.setFont(Ui.body().deriveFont(11f));
+            name.setFont(Ui.body().deriveFont(13f));
             badge.setFont(Ui.body().deriveFont(10f));
             badge.setBorder(BorderFactory.createEmptyBorder(1, 7, 2, 7));
-            JPanel top = new JPanel();
-            top.setOpaque(false);
-            top.setLayout(new BoxLayout(top, BoxLayout.X_AXIS));
-            top.add(name);
-            top.add(Box.createHorizontalStrut(6));
-            top.add(badge);
-            top.add(Box.createHorizontalGlue());
-            add(top);
-            add(Box.createVerticalStrut(2));
-            add(partner);
+            add(name, BorderLayout.WEST);
+            add(badge, BorderLayout.EAST);
+        }
+
+        /** JList paints renderers without validating them: lay out our children first. */
+        @Override
+        protected void paintComponent(Graphics g) {
+            doLayout();
+            super.paintComponent(g);
         }
 
         /** Unmatched rows are hidden from New Names: a zero-height cell keeps the shared model aligned. */
@@ -444,15 +433,15 @@ public final class RenamePanel extends JPanel {
                 return HIDDEN_CELL;
             }
             Path shown = showSource ? pair.source() : pair.target();
-            Path other = showSource ? pair.target() : pair.source();
             // The New Names list shows the matched display name, not the file name
-            name.setText(!showSource && pair.display() != null
-                    ? pair.display() : baseName(shown));
-            String partnerText = showSource && pair.display() != null
-                    ? pair.display() : baseName(other);
-            partner.setText(partnerText.equals(name.getText()) ? "" : partnerText);
+            String text = !showSource && pair.display() != null
+                    ? pair.display() : baseName(shown);
             String ext = MediaScanner.extension(shown);
             badge.setText(ext.isEmpty() ? "" : ext.toLowerCase(java.util.Locale.ROOT));
+            // Keep the row on one line: clip long names with an ellipsis so the
+            // extension pill always stays visible at the edge.
+            int avail = list.getWidth() - 24 - (ext.isEmpty() ? 0 : 40);
+            name.setText(clip(text, getFontMetrics(name.getFont()), Math.max(avail, 80)));
 
             Color fg = Ui.text();
             Color muted = Ui.secondary();
@@ -463,16 +452,26 @@ public final class RenamePanel extends JPanel {
                     // Unmatched rows stay plain — red is reserved for conflicts
                     default -> fg;
                 });
-                partner.setForeground(muted);
                 badge.setForeground(muted);
                 setBackground(new Color(0, 0, 0, 0));
             } else {
                 name.setForeground(fg);
-                partner.setForeground(Ui.fade(fg, 45));
                 badge.setForeground(fg);
                 setBackground(Ui.accent());
             }
             return this;
+        }
+
+        /** Shorten to fit, with a trailing ellipsis. */
+        private static String clip(String text, java.awt.FontMetrics fm, int width) {
+            if (fm.stringWidth(text) <= width) {
+                return text;
+            }
+            int end = text.length();
+            while (end > 1 && fm.stringWidth(text.substring(0, end) + "…") > width) {
+                end--;
+            }
+            return text.substring(0, end) + "…";
         }
 
         /** Extension pill: a small rounded badge with the file type. */
@@ -988,33 +987,53 @@ public final class RenamePanel extends JPanel {
     }
 
     /** Fetch & Match Data popup: branded datasources per mode + options. */
+    /**
+     * Fetch &amp; Match Data menu: sections instead of one long list, and the
+     * provider/mode that is currently active carries a tick so the next click
+     * is predictable.
+     */
     private JPopupMenu buildFetchPopup() {
+        String db = String.valueOf(dbBox.getSelectedItem());
+        String mode = modeControl.getSelected();
         JPopupMenu menu = new JPopupMenu();
-        menu.add(groupLabel("Episode Mode"));
-        menu.add(brandedItem("TheMovieDB::TV", "01B4E5", () -> fetchMatch("tmdb", "episode")));
-        menu.add(brandedItem("TheTVDB", "00956A", () -> fetchMatch("tvdb", "episode")));
-        menu.add(brandedItem("TVmaze", "2E7DD1", () -> fetchMatch("tvmaze", "episode")));
-        menu.add(brandedItem("Kitsu (Anime)", "7E57C2", () -> fetchMatch("kitsu", "episode")));
-        menu.add(groupLabel("Movie Mode"));
-        menu.add(brandedItem("TheMovieDB", "01B4E5", () -> fetchMatch("tmdb", "movie")));
-        menu.add(brandedItem("OMDb", "F5C518", () -> fetchMatch("omdb", "movie")));
-        menu.add(groupLabel("Music Mode"));
-        menu.add(disabledItem("AcoustID", "4CAF50", "not yet supported"));
-        menu.add(disabledItem("ID3 Tags", "9E9E9E", "not yet supported"));
-        menu.add(groupLabel("Smart Mode"));
-        menu.add(item("Automatic", () -> {
+
+        menu.add(section("Smart Mode"));
+        menu.add(item("Automatic", "auto".equals(db), () -> {
             modeControl.setSelected("auto");
             dbBox.setSelectedItem("auto");
             match();
         }));
-        menu.add(item("Attributes (offline)", () -> {
+        menu.add(item("Attributes (offline)", "local".equals(db), () -> {
             modeControl.setSelected("local");
             dbBox.setSelectedItem("local");
             match();
         }));
+        menu.add(item("Edit Match…", false, this::editMatch));
+
         menu.addSeparator();
-        menu.add(item("Edit Format…", this::editFormat));
-        menu.add(item("Preferences…", () -> buildSettingsPopup().show(namesList, 40, 40)));
+        menu.add(section("Episode Mode"));
+        menu.add(brandedItem("TheMovieDB::TV", "01B4E5", "tmdb".equals(db) && "episode".equals(mode),
+                () -> fetchMatch("tmdb", "episode")));
+        menu.add(brandedItem("TVmaze", "2E7DD1", "tvmaze".equals(db) && "episode".equals(mode),
+                () -> fetchMatch("tvmaze", "episode")));
+        menu.add(brandedItem("Kitsu (Anime)", "7E57C2", "kitsu".equals(db) && "episode".equals(mode),
+                () -> fetchMatch("kitsu", "episode")));
+
+        menu.addSeparator();
+        menu.add(section("Movie Mode"));
+        menu.add(brandedItem("TheMovieDB", "01B4E5", "tmdb".equals(db) && "movie".equals(mode),
+                () -> fetchMatch("tmdb", "movie")));
+        menu.add(brandedItem("OMDb", "F5C518", "omdb".equals(db) && "movie".equals(mode),
+                () -> fetchMatch("omdb", "movie")));
+
+        menu.addSeparator();
+        menu.add(section("Music Mode"));
+        menu.add(disabledItem("AcoustID", "4CAF50", "not yet supported"));
+        menu.add(disabledItem("ID3 Tags", "9E9E9E", "not yet supported"));
+
+        menu.addSeparator();
+        menu.add(item("Edit Format…", false, this::editFormat));
+        menu.add(item("Preferences…", false, () -> buildSettingsPopup().show(namesList, 40, 40)));
         return menu;
     }
 
@@ -1024,17 +1043,43 @@ public final class RenamePanel extends JPanel {
         match();
     }
 
-    /** Menu row with the provider's brand dot. */
-    private static JMenuItem brandedItem(String label, String hex, Runnable action) {
+    /** Menu row with the provider's brand dot, ticked when it is the active choice. */
+    private static JMenuItem brandedItem(String label, String hex, boolean active, Runnable action) {
         JMenuItem item = new JMenuItem(label);
-        item.setIcon(dotIcon(hex));
+        Icon dot = dotIcon(hex);
+        item.setIcon(sideBySide(dot, active ? Ui.icon("check", 12) : blankIcon(12)));
+        if (active) {
+            item.setFont(item.getFont().deriveFont(Font.BOLD));
+        }
         item.addActionListener(e -> action.run());
         return item;
     }
 
+    /** Two icons side by side (brand dot + tick). */
+    private static Icon sideBySide(Icon first, Icon second) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                int height = getIconHeight();
+                first.paintIcon(c, g, x, y + (height - first.getIconHeight()) / 2);
+                second.paintIcon(c, g, x + first.getIconWidth() + 5, y + (height - second.getIconHeight()) / 2);
+            }
+
+            @Override
+            public int getIconWidth() {
+                return first.getIconWidth() + 5 + second.getIconWidth();
+            }
+
+            @Override
+            public int getIconHeight() {
+                return Math.max(first.getIconHeight(), second.getIconHeight());
+            }
+        };
+    }
+
     private static JMenuItem disabledItem(String label, String hex, String why) {
         JMenuItem item = new JMenuItem(label);
-        item.setIcon(dotIcon(hex));
+        item.setIcon(sideBySide(dotIcon(hex), blankIcon(12)));
         item.setEnabled(false);
         item.setToolTipText(why);
         return item;
@@ -1089,9 +1134,12 @@ public final class RenamePanel extends JPanel {
         updateEmptyState();
     }
 
-    private static JMenuItem groupLabel(String text) {
-        JMenuItem label = new JMenuItem(text);
-        label.setEnabled(false);
+    /** Non-clickable section header inside a popup menu. */
+    private static JComponent section(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(Ui.body().deriveFont(Font.BOLD, 10.5f));
+        label.setForeground(Ui.secondary());
+        label.setBorder(BorderFactory.createEmptyBorder(7, 12, 3, 12));
         return label;
     }
 
@@ -1119,6 +1167,9 @@ public final class RenamePanel extends JPanel {
             menu.add(item("Rename…", () -> renameFileDirect(pair.source())));
             menu.add(item("Move to Trash", () -> moveToTrash(pair.source())));
             menu.addSeparator();
+            // Unmatched files never appear in New Names, so the candidate
+            // picker has to be reachable from the original file as well.
+            menu.add(item("Edit Match…", () -> editMatch(pair)));
         }
         menu.add(item("Exclude Selected Items", this::removeSelected));
         return menu;
@@ -1128,6 +1179,37 @@ public final class RenamePanel extends JPanel {
         JMenuItem item = new JMenuItem(text);
         item.addActionListener(e -> action.run());
         return item;
+    }
+
+    /** Menu row; the active choice is bold with a leading tick. */
+    private static JMenuItem item(String text, boolean active, Runnable action) {
+        JMenuItem item = new JMenuItem(text);
+        // Same leading width as the provider rows so every label lines up.
+        item.setIcon(sideBySide(blankIcon(10), active ? Ui.icon("check", 12) : blankIcon(12)));
+        if (active) {
+            item.setFont(item.getFont().deriveFont(Font.BOLD));
+        }
+        item.addActionListener(e -> action.run());
+        return item;
+    }
+
+    /** Invisible spacer icon (keeps menu labels aligned). */
+    private static Icon blankIcon(int size) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+            }
+
+            @Override
+            public int getIconWidth() {
+                return size;
+            }
+
+            @Override
+            public int getIconHeight() {
+                return size;
+            }
+        };
     }
 
     private void editName() {
@@ -1165,6 +1247,11 @@ public final class RenamePanel extends JPanel {
         if (pair == null) {
             pair = selected(originalList);
         }
+        editMatch(pair);
+    }
+
+    /** Candidate picker for one row: fetch ranked hits, apply the one the user picks. */
+    private void editMatch(Pair pair) {
         if (pair == null) {
             return;
         }
@@ -1426,7 +1513,7 @@ public final class RenamePanel extends JPanel {
     }
 
     // ============================================================
-    // Presets (F1–F12 style quick formats, persisted in ~/.renami/presets.json)
+    // Presets (quick formats picked from the Presets menu, persisted in ~/.renami/presets.json)
     // ============================================================
 
     private JPopupMenu buildPresetsPopup() {
@@ -1434,7 +1521,7 @@ public final class RenamePanel extends JPanel {
         List<Map<String, String>> presets = loadPresets();
         for (int i = 0; i < presets.size(); i++) {
             Map<String, String> preset = presets.get(i);
-            String label = (i < 12 ? "F" + (i + 1) + "  " : "") + preset.getOrDefault("name", preset.get("format"));
+            String label = preset.getOrDefault("name", preset.get("format"));
             menu.add(item(label, () -> {
                 format = preset.get("format");
                 applyFormat();
@@ -1473,29 +1560,6 @@ public final class RenamePanel extends JPanel {
                 Map.of("name", "Year First", "format", "({y}) {n}"),
                 Map.of("name", "Title Case Episodes", "format", "{n} - {s00e00}"),
                 Map.of("name", "Jellyfin Movies", "format", "{n} ({y})/{n} ({y})"));
-    }
-
-    /** F1–F12 apply presets 1–12. */
-    private void installPresetKeys() {
-        InputMap keys = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-        ActionMap actions = getActionMap();
-        for (int i = 0; i < 12; i++) {
-            final int index = i;
-            KeyStroke key = KeyStroke.getKeyStroke("F" + (i + 1));
-            keys.put(key, "preset" + index);
-            actions.put("preset" + index, new AbstractAction() {
-                @Override
-                public void actionPerformed(java.awt.event.ActionEvent e) {
-                    List<Map<String, String>> presets = loadPresets();
-                    if (index < presets.size()) {
-                        format = presets.get(index).get("format");
-                        applyFormat();
-                        statusLabel.setText("preset F" + (index + 1) + ": "
-                                + presets.get(index).getOrDefault("name", format));
-                    }
-                }
-            });
-        }
     }
 
     private void editPresets() {

@@ -23,6 +23,14 @@ public final class RenamiFrame extends JFrame {
     private final java.util.Map<String, JButton> primaryButtons = new java.util.HashMap<>();
     private JPanel content;
     private Sidebar sidebar;
+    private final JLabel viewHeader = Ui.header(" ");
+
+    /** The window-level view title (centered over the whole window, sidebar included). */
+    private static final java.util.Map<String, String> VIEW_TITLES = java.util.Map.of(
+            "rename", "Rename", "episodes", "Episodes", "postprocess", "Post-Process",
+            "watch", "Watch", "subtitles", "Subtitles", "filter", "Filter",
+            "duplicates", "Duplicates", "checksum", "Checksum", "history", "History",
+            "list", "List");
 
     /** Switches the visible card and re-arms the Return-key default button. */
     void showView(String id) {
@@ -30,6 +38,7 @@ public final class RenamiFrame extends JFrame {
         if (sidebar != null) {
             sidebar.setActive(id);
         }
+        viewHeader.setText(VIEW_TITLES.getOrDefault(id, ""));
         JButton primary = primaryButtons.get(id);
         if (primary != null) {
             getRootPane().setDefaultButton(primary);
@@ -110,6 +119,14 @@ public final class RenamiFrame extends JFrame {
 
         add(sidebar, BorderLayout.WEST);
         add(content, BorderLayout.CENTER);
+
+        // One header for every view, centered over the whole window — the per-panel
+        // titles used to sit centered in the content area only, which read off-centre.
+        JPanel headerBar = new JPanel(new BorderLayout());
+        headerBar.setOpaque(false);
+        headerBar.setBorder(BorderFactory.createEmptyBorder(16, 0, 2, 0));
+        headerBar.add(viewHeader, BorderLayout.CENTER);
+        add(headerBar, BorderLayout.NORTH);
         getRootPane().setDefaultButton(renamePanel.renameButton());
         installMenuBar();
 
@@ -119,16 +136,37 @@ public final class RenamiFrame extends JFrame {
         }
 
         setSize(1120, 700);
+        enforceMinimumSize();
         setLocationByPlatform(true);
+    }
+
+    /**
+     * Hold the window at the smallest size where every view shows all of its
+     * controls: the widest view's preferred width plus the rail, capped at the
+     * screen. Shrinking below that used to clip buttons off the bottom bars.
+     */
+    private void enforceMinimumSize() {
+        int widest = content.getPreferredSize().width;
+        for (Component c : content.getComponents()) {
+            widest = Math.max(widest, c.getPreferredSize().width);
+        }
+        Rectangle work = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getMaximumWindowBounds();
+        int minWidth = Math.min(widest + sidebar.getPreferredSize().width + 24, work.width - 40);
+        int minHeight = Math.min(640, work.height - 120);
+        setMinimumSize(new Dimension(minWidth, minHeight));
+        if (getWidth() < minWidth || getHeight() < minHeight) {
+            setSize(Math.max(getWidth(), minWidth), Math.max(getHeight(), minHeight));
+        }
     }
 
     /** macOS menu bar: Help menu with the docs/support links. */
     private void installMenuBar() {
         JMenuBar bar = new JMenuBar();
         JMenu help = new JMenu("Help");
-        JMenuItem keys = new JMenuItem("API Keys…");
-        keys.addActionListener(e -> ApiKeysDialog.show(this));
-        help.add(keys);
+        JMenuItem setup = new JMenuItem("Set Up Renami…");
+        setup.addActionListener(e -> ApiKeysDialog.show(this));
+        help.add(setup);
         help.addSeparator();
         help.add(menuLink("Getting Started", "https://github.com/Wh1t3-Jasm1n3/renami"));
         help.add(menuLink("FAQ", "https://github.com/Wh1t3-Jasm1n3/renami#faq"));
@@ -198,7 +236,7 @@ public final class RenamiFrame extends JFrame {
                 }
             });
             frame.setVisible(true);
-            ApiKeysDialog.setupIfUnconfigured(frame);
+            ApiKeysDialog.showIfUnconfigured(frame);
             // Startup version check (Help ▸ Check for Updates does the manual one)
             UpdateDialog.checkOnStartup(frame);
         });

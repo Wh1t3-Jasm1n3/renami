@@ -9,74 +9,83 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * API-key panel: one row per metadata service, each with a
- * "Get key…" button that opens the provider's sign-up page and a "Test"
- * button that validates the stored key with a live lookup. Services that
- * need no key at all (TVmaze, Kitsu, Local) are listed too — that is the
- * point of the panel: a fresh install already resolves TV shows, and the
- * rows say so in plain terms.
+ * The one setup page: what already works with no key at all, then the three
+ * providers you can add a key for — each row is one line: name, a masked key
+ * field with an eye toggle, "Get key…" and "Test". Providers that need no key
+ * (TVmaze, Kitsu, Local) are not offered as options; the green card says they
+ * already work. Opened from Help ▸ Set Up Renami… and once on first run.
  */
 public final class ApiKeysDialog extends JDialog {
 
-    /** One service row: its editable fields plus where to report test results. */
+    private static final char MASK = '\u2022';
+
+    /** One provider row: masked field, eye toggle, and where test results appear. */
     private final class Row {
         final ApiService service;
-        final JTextField keyField;
-        final JTextField pinField;
-        final JLabel status = new JLabel(" ");
+        final JPasswordField keyField;
+        final JTextArea status = new JTextArea(" ");
         final JButton testButton;
 
         Row(ApiService service) {
             this.service = service;
-            this.keyField = service.keyProperty() == null ? null : new JTextField(26);
-            this.pinField = service.pinProperty() == null ? null : new JTextField(12);
-            if (keyField != null) {
-                keyField.setText(config.get(service.keyProperty()));
-            }
-            if (pinField != null) {
-                pinField.setText(config.get(service.pinProperty()));
-            }
-            this.testButton = service.probeKind() == null ? null : new JButton("Test", Ui.icon("fetch", 12));
-            if (testButton != null) {
-                testButton.addActionListener(e -> test(this));
-            }
-            if (!service.needsKey()) {
-                status.setText("no key needed — works out of the box");
-                status.setForeground(Ui.secondary());
-            }
+            this.keyField = new JPasswordField(20);
+            keyField.setText(config.get(service.keyProperty()));
+            this.testButton = new JButton("Test", Ui.icon("fetch", 12));
+            testButton.addActionListener(e -> test(this));
+            // A wrapping text area (not an HTML label) so long provider messages
+            // wrap reliably inside their fixed slot instead of being clipped.
+            status.setFont(Ui.body().deriveFont(Font.PLAIN, 11f));
+            status.setLineWrap(true);
+            status.setWrapStyleWord(true);
+            status.setEditable(false);
+            status.setFocusable(false);
+            status.setOpaque(false);
+            status.setBorder(null);
+            status.setCursor(null);
+        }
+
+        String typedKey() {
+            return new String(keyField.getPassword()).trim();
         }
     }
 
     private final Config config = Config.load();
     private final List<Row> rows = new ArrayList<>();
+    private boolean firstRun;
 
     private ApiKeysDialog(Window owner) {
-        super(owner, "API Keys", ModalityType.APPLICATION_MODAL);
+        super(owner, "Set Up Renami", ModalityType.APPLICATION_MODAL);
         setResizable(false);
         AppIcon.applyTo(this);
 
         JPanel body = new JPanel(new BorderLayout(0, 12));
         body.setBorder(BorderFactory.createEmptyBorder(16, 18, 12, 18));
 
-        JPanel head = new JPanel(new BorderLayout(0, 4));
+        JPanel head = new JPanel(new BorderLayout(0, 10));
         head.setOpaque(false);
-        JLabel title = new JLabel("Metadata services");
+        JLabel title = new JLabel("Set Up Renami");
         title.setFont(Ui.title(16f));
         title.setForeground(Ui.text());
-        JLabel intro = new JLabel("<html><body style='width:460px'>Renami works with <b>no key at all</b>: "
-                + "TV shows resolve through TVmaze and anime through Kitsu. Add one free TMDb key and "
-                + "movies match too. Keys are stored only in ~/.renami/config.properties.</body></html>");
+        JLabel intro = new JLabel("<html><body style='width:460px'>Rename TV shows and anime "
+                + "<b>right now — no setup</b>. One free TMDb key adds movies.</body></html>");
         intro.setForeground(Ui.secondary());
         head.add(title, BorderLayout.NORTH);
-        head.add(intro, BorderLayout.SOUTH);
+        JPanel headCenter = new JPanel(new BorderLayout(0, 10));
+        headCenter.setOpaque(false);
+        headCenter.add(intro, BorderLayout.NORTH);
+        headCenter.add(keyFreeCard(), BorderLayout.SOUTH);
+        head.add(headCenter, BorderLayout.CENTER);
         body.add(head, BorderLayout.NORTH);
 
         JPanel grid = new JPanel(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(5, 0, 5, 10);
-        c.anchor = GridBagConstraints.WEST;
+        c.insets = new Insets(6, 0, 6, 10);
+        c.anchor = GridBagConstraints.NORTHWEST; // top-align: name, field and buttons share one line
         int y = 0;
         for (ApiService service : ApiService.all()) {
+            if (!service.needsKey()) {
+                continue; // key-free providers already work — the green card covers them
+            }
             Row row = new Row(service);
             rows.add(row);
             c.gridx = 0; c.gridy = y;
@@ -84,16 +93,12 @@ public final class ApiKeysDialog extends JDialog {
             c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
             grid.add(fieldColumn(row), c);
             c.gridx = 2; c.weightx = 0; c.fill = GridBagConstraints.NONE;
-            int buttons = (service.signupUrl() == null ? 0 : 1) + (row.testButton == null ? 0 : 1);
-            JPanel actions = new JPanel(new GridLayout(Math.max(buttons, 1), 1, 0, 4));
-            if (service.signupUrl() != null) {
-                JButton get = new JButton("Get key…");
-                get.addActionListener(e -> openUrl(service.signupUrl()));
-                actions.add(get);
-            }
-            if (row.testButton != null) {
-                actions.add(row.testButton);
-            }
+            JPanel actions = new JPanel(new GridLayout(1, 2, 6, 0));
+            actions.setOpaque(false);
+            JButton get = new JButton("Get key…");
+            get.addActionListener(e -> openUrl(service.signupUrl()));
+            actions.add(get);
+            actions.add(row.testButton);
             grid.add(actions, c);
             y++;
         }
@@ -115,6 +120,42 @@ public final class ApiKeysDialog extends JDialog {
         setLocationRelativeTo(owner);
     }
 
+    /** The honest selling point: three providers answer with zero configuration. */
+    private JComponent keyFreeCard() {
+        JPanel rowsPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
+        c.anchor = GridBagConstraints.WEST;
+        for (String[] feature : new String[][]{
+                {"TV shows and episodes", "TVmaze"},
+                {"Anime", "Kitsu"},
+                {"Rename from the filename", "Local, offline"}}) {
+            JLabel check = new JLabel(Ui.icon("check", 15, () -> new Color(0x30, 0xB0, 0x60)));
+            rowsPanel.add(check, c);
+            c.gridx++;
+            JLabel text = new JLabel("<html><b>" + feature[0] + "</b>  <span style='color:gray'>"
+                    + feature[1] + "</span></html>");
+            text.setFont(Ui.body());
+            c.weightx = 1;
+            rowsPanel.add(text, c);
+            c.gridx = 0;
+            c.gridy++;
+            c.weightx = 0;
+            c.insets = new Insets(4, 0, 0, 0);
+        }
+        JPanel card = new JPanel(new BorderLayout(0, 8));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Ui.fade(Ui.text(), 0.85)),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+        card.setBackground(Ui.card());
+        JLabel label = new JLabel("Works right now — no key needed");
+        label.setFont(Ui.title(13f));
+        card.add(label, BorderLayout.NORTH);
+        card.add(rowsPanel, BorderLayout.CENTER);
+        return card;
+    }
+
     /** Service name plus its current terms, so users can judge what to pay for. */
     private static JComponent nameColumn(ApiService service) {
         JPanel column = new JPanel(new BorderLayout(0, 2));
@@ -128,61 +169,70 @@ public final class ApiKeysDialog extends JDialog {
         return column;
     }
 
-    /** Key field (or the key-free note) with the per-row status line below it. */
+    /** Masked key field with an eye toggle, the TMDb key-form hint, and the status line. */
     private JComponent fieldColumn(Row row) {
         JPanel column = new JPanel(new BorderLayout(0, 3));
         column.setOpaque(false);
-        JPanel fields = new JPanel(new GridLayout(row.pinField == null ? 1 : 2, 1, 0, 4));
-        fields.setOpaque(false);
-        if (row.keyField != null) {
-            fields.add(row.keyField);
-        } else {
-            JLabel free = new JLabel("—");
-            free.setForeground(Ui.secondary());
-            fields.add(free);
-        }
-        if (row.pinField != null) {
-            row.pinField.putClientProperty("JTextField.placeholderText", "subscriber PIN (optional)");
-            fields.add(row.pinField);
+        JPanel field = new JPanel(new BorderLayout(4, 0));
+        field.setOpaque(false);
+        row.keyField.setEchoChar(MASK);
+        JToggleButton eye = new JToggleButton(Ui.icon("eye", 14));
+        eye.setSelectedIcon(Ui.icon("eye-off", 14));
+        eye.setBorderPainted(false);
+        eye.setContentAreaFilled(false);
+        eye.setFocusPainted(false);
+        eye.setToolTipText("Show / hide the key");
+        eye.addActionListener(e -> row.keyField.setEchoChar(eye.isSelected() ? (char) 0 : MASK));
+        field.add(row.keyField, BorderLayout.CENTER);
+        field.add(eye, BorderLayout.EAST);
+        column.add(field, BorderLayout.NORTH);
+        if ("tmdb".equals(row.service.id())) {
+            JLabel hint = new JLabel("<html>Paste the v3 key or the long v4 token —<br>Renami detects which.</html>");
+            hint.setFont(Ui.body().deriveFont(Font.PLAIN, 11f));
+            hint.setForeground(Ui.secondary());
+            column.add(hint, BorderLayout.CENTER);
         }
         row.status.setFont(Ui.body().deriveFont(Font.PLAIN, 11f));
-        column.add(fields, BorderLayout.NORTH);
+        // Fixed slot (3 lines tall): a message appearing or wrapping never reflows the
+        // rows or pushes the buttons sideways. The text area wraps at the column width.
+        row.status.setPreferredSize(new Dimension(340, 54));
         column.add(row.status, BorderLayout.SOUTH);
         return column;
     }
 
     private void save() {
         for (Row row : rows) {
-            if (row.keyField != null) {
-                String value = row.keyField.getText().trim();
-                if (value.isEmpty()) {
-                    Config.unset(row.service.keyProperty());
-                } else {
-                    Config.set(row.service.keyProperty(), value);
-                }
-            }
-            if (row.pinField != null) {
-                String value = row.pinField.getText().trim();
-                if (value.isEmpty()) {
-                    Config.unset(row.service.pinProperty());
-                } else {
-                    Config.set(row.service.pinProperty(), value);
-                }
-            }
+            saveRow(row);
         }
         for (Row row : rows) {
-            if (row.service.needsKey()) {
-                row.status.setText("saved");
-                row.status.setForeground(Ui.secondary());
-            }
+            setStatus(row, "Saved", Ui.secondary());
         }
     }
 
-    /** Live check against the provider, off the UI thread like every other lookup. */
+    /** Status text wraps inside the row's fixed slot — it never reflows the layout. */
+    private static void setStatus(Row row, String text, Color color) {
+        row.status.setText(text);
+        row.status.setForeground(color);
+    }
+
+    private static void saveRow(Row row) {
+        String value = row.typedKey();
+        if (value.isEmpty()) {
+            Config.unset(row.service.keyProperty());
+        } else {
+            Config.set(row.service.keyProperty(), value);
+        }
+    }
+
+    /**
+     * Live check with exactly what is in the field: the row is saved first so the
+     * probe (which reads the config) tests the typed key, and the probe bypasses
+     * the response cache — a cached answer would not prove the key works.
+     */
     private void test(Row row) {
+        saveRow(row);
         row.testButton.setEnabled(false);
-        row.status.setText("testing…");
-        row.status.setForeground(Ui.secondary());
+        setStatus(row, "Testing…", Ui.secondary());
         new Thread(() -> {
             String message;
             boolean ok;
@@ -196,8 +246,7 @@ public final class ApiKeysDialog extends JDialog {
             final String text = message;
             final Color color = ok ? new Color(0x30, 0xB0, 0x60) : new Color(0xE0, 0x4A, 0x4A);
             SwingUtilities.invokeLater(() -> {
-                row.status.setText(text);
-                row.status.setForeground(color);
+                setStatus(row, text, color);
                 row.testButton.setEnabled(true);
             });
         }, "renami-api-test").start();
@@ -212,41 +261,37 @@ public final class ApiKeysDialog extends JDialog {
         }
     }
 
-    /** Opens the panel over the main window. */
+    /** First-run sheet: closing it in any way marks setup as seen, so it never nags. */
+    @Override
+    public void dispose() {
+        if (firstRun) {
+            Config.set("setup.done", "true");
+        }
+        super.dispose();
+    }
+
+    /** Help ▸ Set Up Renami…: always available, so the page is never lost. */
     public static void show(Window owner) {
         new ApiKeysDialog(owner).setVisible(true);
     }
 
     /**
-     * First-run guidance: with no key configured the app still works (TVmaze/Kitsu),
-     * but movies will not match. Ask once which way the user wants to start, and
-     * never ask again once they chose.
+     * First run only: with no key configured the app still resolves TV and anime,
+     * but movies will not match — show the page once, then never unasked again.
      */
-    public static void setupIfUnconfigured(Frame owner) {
+    public static void showIfUnconfigured(Frame owner) {
         Config config = Config.load();
         if ("true".equals(config.get("setup.done"))) {
             return;
         }
-        boolean anyKey = false;
         for (ApiService service : ApiService.all()) {
             if (service.keyProperty() != null && config.get(service.keyProperty()) != null) {
-                anyKey = true;
+                Config.set("setup.done", "true");
+                return;
             }
         }
-        if (anyKey) {
-            Config.set("setup.done", "true");
-            return;
-        }
-        String[] options = {"Add a free TMDb key…", "Continue without a key"};
-        int choice = JOptionPane.showOptionDialog(owner,
-                "<html><body style='width:340px'>Renami can already rename <b>TV shows</b> with no setup "
-                        + "(TVmaze) and <b>anime</b> (Kitsu).<br><br>Movies need one free key: TMDb takes "
-                        + "about two minutes and covers movies and TV.</body></html>",
-                "Welcome to Renami", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE,
-                null, options, options[1]);
-        Config.set("setup.done", "true");
-        if (choice == 0) {
-            show(owner);
-        }
+        ApiKeysDialog dialog = new ApiKeysDialog(owner);
+        dialog.firstRun = true;
+        dialog.setVisible(true);
     }
 }

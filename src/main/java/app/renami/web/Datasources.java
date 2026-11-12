@@ -5,7 +5,6 @@ import app.renami.web.kitsu.KitsuClient;
 import app.renami.web.local.LocalDatasource;
 import app.renami.web.omdb.OmdbClient;
 import app.renami.web.tmdb.TmdbClient;
-import app.renami.web.tvdb.TheTVDBClient;
 import app.renami.web.tvmaze.TvmazeClient;
 
 import java.util.ArrayList;
@@ -22,14 +21,13 @@ public final class Datasources {
         HttpJson http = new HttpJson(Config.dataDir().resolve("cache"), !noCache);
         return switch (db.toLowerCase()) {
             case "tmdb" -> tmdb(config, http);
-            case "tvdb" -> tvdb(config, http);
             case "omdb" -> omdb(config, http);
             case "tvmaze" -> new TvmazeClient(http);
             case "kitsu" -> new KitsuClient(http);
             case "local" -> new LocalDatasource();
             case "auto" -> autoChain(config, http);
             default -> throw new IllegalStateException(
-                    "unknown datasource: " + db + " (use auto|tmdb|tvdb|tvmaze|omdb|kitsu|local)");
+                    "unknown datasource: " + db + " (use auto|tmdb|tvmaze|omdb|kitsu|local)");
         };
     }
 
@@ -42,9 +40,6 @@ public final class Datasources {
         List<Datasource> chain = new ArrayList<>();
         if (config.get("tmdb.api.key") != null) {
             chain.add(tmdb(config, http));
-        }
-        if (config.get("tvdb.api.key") != null) {
-            chain.add(tvdb(config, http));
         }
         if (config.get("omdb.api.key") != null) {
             chain.add(omdb(config, http));
@@ -65,14 +60,6 @@ public final class Datasources {
             throw new IllegalStateException("TMDb selected but no key set — set RENAMI_TMDB_API_KEY or tmdb.api.key in ~/.renami/config.properties");
         }
         return new TmdbClient(key, http, config.get("datasource.language"));
-    }
-
-    private static Datasource tvdb(Config config, HttpJson http) {
-        String key = config.get("tvdb.api.key");
-        if (key == null) {
-            throw new IllegalStateException("TheTVDB selected but no key set — set RENAMI_TVDB_API_KEY or tvdb.api.key in ~/.renami/config.properties");
-        }
-        return new TheTVDBClient(key, config.get("tvdb.user.pin"), http);
     }
 
     private static Datasource omdb(Config config, HttpJson http) {

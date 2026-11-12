@@ -91,13 +91,13 @@ public final class HttpJson implements JsonGet {
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             int status = response.statusCode();
             if (status == 401 || status == 403) {
-                throw new IOException("authentication failed for " + request.uri() + " — check your API key");
+                throw new IOException("authentication failed (HTTP " + status + ") — the provider refused this key");
             }
             if (status == 429) {
-                throw new IOException("rate limit reached for " + request.uri() + " — slow down");
+                throw new IOException("rate limit reached (HTTP 429) — wait a minute and try again");
             }
             if (status / 100 != 2) {
-                throw new IOException("HTTP " + status + " for " + request.uri());
+                throw new IOException("HTTP " + status + " from " + request.uri());
             }
             return response.body();
         } catch (InterruptedException e) {

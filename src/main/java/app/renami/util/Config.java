@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Properties;
 
 /** Configuration from ~/.renami/config.properties with environment variable overrides. */
@@ -58,6 +59,8 @@ public final class Config {
             try (var out = Files.newOutputStream(file)) {
                 p.store(out, "renami");
             }
+            // API keys live in this file: keep it owner-read/write only.
+            Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
         } catch (IOException e) {
             System.err.println("warning: cannot write " + file + ": " + e.getMessage());
         }

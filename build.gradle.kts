@@ -33,6 +33,32 @@ application {
     applicationName = "renami"
 }
 
+// The generated bin/renami launcher falls back to bare `java`, which on macOS is the
+// stub that prints "Unable to locate a Java Runtime" when no JDK is registered. Give
+// it a JAVA_HOME fallback chain (system JDK → our Temurin packaging JDK → Homebrew
+// openjdk@21) so `./build/install/renami/bin/renami gui` works in a plain shell, and
+// the published CLI zip works on Macs that have a JDK but not on PATH.
+tasks.named<org.gradle.jvm.application.tasks.CreateStartScripts>("startScripts") {
+    doLast {
+        val script = unixScript
+        script.writeText(
+            script.readText().replace(
+                "# Determine the Java command to use to start the JVM.",
+                """
+                |# If JAVA_HOME is unset, find a JDK 21+ ourselves before the check below.
+                |if [ -z "${'$'}JAVA_HOME" ] ; then
+                |    for candidate in "${'$'}(/usr/libexec/java_home -v 21+ 2>/dev/null)" "${'$'}HOME/tools/temurin-21/Contents/Home" /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ; do
+                |        if [ -x "${'$'}candidate/bin/java" ] ; then JAVA_HOME="${'$'}candidate" ; break ; fi
+                |    done
+                |fi
+                |
+                |# Determine the Java command to use to start the JVM.
+                """.trimMargin()
+            )
+        )
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
     // pass through opt-in flags for integration-style tests (e.g. FPCALC_TEST=on)

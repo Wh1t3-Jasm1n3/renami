@@ -18,4 +18,9 @@ public interface JsonGet {
     default JsonElement getTree(String url, Map<String, String> headers) throws IOException {
         throw new UnsupportedOperationException("array responses not supported by this transport");
     }
+
+    /** JSON POST, used by the OpenSubtitles login/download endpoints. */
+    default JsonObject post(String url, String jsonBody, Map<String, String> headers) throws IOException {
+        throw new UnsupportedOperationException("POST not supported by this transport");
+    }
 }

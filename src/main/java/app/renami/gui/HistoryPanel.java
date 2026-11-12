@@ -33,7 +33,6 @@ public final class HistoryPanel extends JPanel {
         super(new BorderLayout(0, 16));
         setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
 
-        add(Ui.header("History"), BorderLayout.NORTH);
 
         JScrollPane batchScroll = new JScrollPane(batchTable);
         batchScroll.setBorder(BorderFactory.createEmptyBorder());

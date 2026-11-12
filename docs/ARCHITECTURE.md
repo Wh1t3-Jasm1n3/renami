@@ -24,9 +24,9 @@ app.renami
 │   ├── Datasource       lookup interface (search TV/movie, fetch season, map absolute episode)
 │   ├── Datasources      --db selection + API-key checks
 │   ├── HttpJson         java.net.http + Gson, 24 h on-disk response cache
-│   ├── tmdb.TmdbClient  TMDb v3        · tvdb.TheTVDBClient  TheTVDB v4 (JWT, episode orders)
+│   ├── tmdb.TmdbClient  TMDb v3 (v3 api_key or v4 Bearer, auto-detected)
 │   ├── omdb.OmdbClient  OMDb          · kitsu.KitsuClient    Kitsu JSON:API (anime, key-free)
-│   ├── xem.XemClient    TheXEM anime episode mappings       · acoustid.AcoustIDClient
+│   ├── acoustid.AcoustIDClient
 │   ├── opensubtitles.OpenSubtitlesClient (v2 REST + moviehash search)
 │   └── local.LocalDatasource  offline fallback
 ├── similarity           matching engine
@@ -64,7 +64,7 @@ scan → parse (ReleaseInfo) → group (movie | per-show episodes)
 
 - **CLI first, Swing later** — the engine is UI-independent; the 0.4 GUI wraps the same pipeline.
 - **User-supplied API keys** — commercial vendors bundle provider keys; Renami requires the user's
-  own TMDb/TVDB/OpenSubtitles credentials (env var or config file). This is the single biggest
+  own TMDb/OMDb/OpenSubtitles credentials (env var or config file). This is the single biggest
   behavioral difference from the commercial original.
 - **Groovy as expression language** — `{n} - {s00e00} - {t}` evaluated via `GroovyShell` with a
   binding, mirroring the ergonomics of established rename formats without copying their code.

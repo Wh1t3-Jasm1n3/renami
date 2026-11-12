@@ -1,6 +1,6 @@
 package app.renami.web.opensubtitles;
 
-import app.renami.web.HttpJson;
+import app.renami.web.JsonGet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -29,11 +29,11 @@ public class OpenSubtitlesClient { // non-final: tests substitute a stub transpo
     public record Candidate(long id, String language, String title, int downloads, String format) {
     }
 
-    private final HttpJson http;
+    private final JsonGet http;
     private final Map<String, String> auth;
     private String token;
 
-    public OpenSubtitlesClient(String apiKey, HttpJson http) {
+    public OpenSubtitlesClient(String apiKey, JsonGet http) {
         this.http = http;
         this.auth = Map.of("Apikey", apiKey);
     }

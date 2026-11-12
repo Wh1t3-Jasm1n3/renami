@@ -14,7 +14,7 @@ class ApiServiceTest {
     @Test
     void everyDatasourceServiceHasARow() {
         List<String> ids = ApiService.all().stream().map(ApiService::id).toList();
-        assertEquals(List.of("tmdb", "tvmaze", "kitsu", "omdb", "tvdb", "opensubtitles", "local"), ids);
+        assertEquals(List.of("tmdb", "tvmaze", "kitsu", "omdb", "opensubtitles", "local"), ids);
     }
 
     @Test
@@ -37,13 +37,6 @@ class ApiServiceTest {
                 assertTrue(service.signupUrl().startsWith("https://"), service.id());
             }
         }
-    }
-
-    @Test
-    void tvdbCarriesItsSubscriberPinField() {
-        ApiService tvdb = ApiService.all().stream().filter(s -> s.id().equals("tvdb")).findFirst().orElseThrow();
-        assertEquals("tvdb.user.pin", tvdb.pinProperty());
-        assertTrue(tvdb.terms().contains("PIN"));
     }
 
     @Test

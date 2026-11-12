@@ -9,12 +9,13 @@ import java.util.List;
 
 /**
  * The metadata services Renami knows about: where their keys come from, what they
- * cost a private user and how to prove a key works. This drives the API-key panel
- * and the first-run setup dialog.
+ * cost a private user and how to prove a key works. This drives the single setup
+ * sheet (Help ▸ Set Up Renami…).
  * <p>
- * Terms verified November 2026: TMDb and OMDb are free for personal use, TVmaze and
- * Kitsu need no key at all, and TheTVDB only issues project keys that require either
- * a commercial licence or a paid subscriber PIN per user.
+ * Terms verified November 2026: TMDb and OMDb are free for personal use, and TVmaze
+ * and Kitsu need no key at all. TheTVDB was removed in 1.7.4: it only issues project
+ * keys to commercial apps or paywall users with a subscriber PIN, so no private user
+ * (and never us) could verify the integration end-to-end.
  */
 public record ApiService(String id,
                          String label,
@@ -34,7 +35,7 @@ public record ApiService(String id,
         return List.of(
                 new ApiService("tmdb", "TMDb", "tmdb.api.key", null,
                         "https://www.themoviedb.org/settings/api",
-                        "free for personal use · movies and TV · the one key worth adding",
+                        "free · movies and TV",
                         true, PROBE_MOVIE),
                 new ApiService("tvmaze", "TVmaze", null, null,
                         "https://www.tvmaze.com/api",
@@ -48,13 +49,9 @@ public record ApiService(String id,
                         "https://www.omdbapi.com/apikey.aspx",
                         "free · 1 000 lookups a day · IMDb data",
                         true, PROBE_MOVIE),
-                new ApiService("tvdb", "TheTVDB", "tvdb.api.key", "tvdb.user.pin",
-                        "https://www.thetvdb.com/dashboard/account/apikey",
-                        "keys are project-only and need a paid subscriber PIN — optional",
-                        true, PROBE_SHOW),
                 new ApiService("opensubtitles", "OpenSubtitles", "opensubtitles.api.key", null,
                         "https://www.opensubtitles.com/en/consumers",
-                        "free account · needed only for the Subtitles view",
+                        "free account · Subtitles view only",
                         true, PROBE_SUBTITLES),
                 new ApiService("local", "Local (offline)", null, null, null,
                         "no key and no network · renames from filename facts",
@@ -63,7 +60,8 @@ public record ApiService(String id,
 
     /**
      * Live check that a configured key works: one small lookup, answered with a
-     * one-line summary the UI can show next to the field.
+     * one-line summary the UI can show next to the field. The lookup bypasses
+     * the 24 h response cache — a cached answer would not prove the typed key works.
      *
      * @throws Exception whatever the provider reports (bad key, no network, rate limit)
      */
@@ -74,27 +72,23 @@ public record ApiService(String id,
             if (key == null) {
                 throw new IllegalStateException("no key configured");
             }
-            List<OpenSubtitlesClient.Candidate> hits = new OpenSubtitlesClient(key,
-                    new HttpJson(Config.dataDir().resolve("cache"), true)).search("Breaking Bad", "en");
-            return hits.isEmpty() ? "connected, but no subtitles for the test query"
-                    : "works · " + hits.size() + " subtitle hits, best: " + hits.get(0).title();
+            new OpenSubtitlesClient(key,
+                    new HttpJson(Config.dataDir().resolve("cache"), false)).search("Breaking Bad", "en");
+            return "Key works";
         }
-        Datasource datasource = Datasources.create(config, service.id(), false);
+        Datasource datasource = Datasources.create(config, service.id(), true);
         if (service.probeKind().equals(PROBE_SHOW)) {
-            List<ShowInfo> hits = datasource.searchShow("Breaking Bad", 0);
-            if (hits.isEmpty()) {
+            if (datasource.searchShow("Breaking Bad", 0).isEmpty()) {
                 throw new IllegalStateException("answered, but found no series for the test query");
             }
-            return "works · " + hits.size() + " series hits, best: " + hits.get(0).name();
+            return "Connected";
         }
-        List<MovieInfo> movies = datasource.searchMovie("Die Hard", 1988);
-        if (movies.isEmpty()) {
-            List<ShowInfo> shows = datasource.searchShow("Breaking Bad", 0);
-            if (shows.isEmpty()) {
-                throw new IllegalStateException("answered, but found nothing for the test queries");
-            }
-            return "works · " + shows.size() + " series hits, best: " + shows.get(0).name();
+        if (!datasource.searchMovie("Die Hard", 1988).isEmpty()) {
+            return "Key works";
         }
-        return "works · " + movies.size() + " movie hits, best: " + movies.get(0).title();
+        if (datasource.searchShow("Breaking Bad", 0).isEmpty()) {
+            throw new IllegalStateException("answered, but found nothing for the test queries");
+        }
+        return "Key works";
     }
 }

@@ -68,12 +68,6 @@ final class FilterPanel extends JPanel {
         JPanel top = new JPanel();
         top.setOpaque(false);
         top.setLayout(new javax.swing.BoxLayout(top, javax.swing.BoxLayout.Y_AXIS));
-        JPanel titleBar = new JPanel(new BorderLayout());
-        titleBar.setOpaque(false);
-        JLabel title = Ui.header("Filter");
-        title.setHorizontalAlignment(SwingConstants.CENTER);
-        titleBar.add(title, BorderLayout.CENTER);
-        top.add(titleBar);
 
         JPanel folderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         folderRow.setOpaque(false);

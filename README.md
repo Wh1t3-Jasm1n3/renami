@@ -51,7 +51,7 @@ mode that follows the desktop, drag & drop everywhere, and one sidebar with ever
 
 | View | What it does |
 |---|---|
-| **Rename** | The proven dual-panel layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVDB/TVmaze/OMDb/Kitsu (TVmaze needs no key) → edit names (double-click, Load Names, Edit Format with live preview, F1–F12 presets) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
+| **Rename** | The proven dual-panel layout: **Original Files** and **New Names** side by side with a **Match / Rename** column between them. Drop files → Match against TMDb/TVmaze/OMDb/Kitsu (TVmaze needs no key) → edit names (double-click, Load Names, Edit Format with live preview, Presets menu) → Rename. Per-list tool strips for align, exclude, clear, history; action and conflict selectors below. |
 | **Episodes** | Pick a show and season, get the episode list from the datasource, and rename downloaded episodes against it. |
 | **Subtitles** | Search OpenSubtitles for every media file in a folder and download matches next to them. |
 | **Filter** | Regex/glob file filter with live preview — the same engine as `renami filter`. |
@@ -97,7 +97,7 @@ no credentials at all) and **Kitsu** (anime). Everything still works offline wit
 documents its options.
 
 Configuration is read from `~/.renami/config.properties` or `RENAMI_*` environment
-variables: `RENAMI_TMDB_API_KEY`, `RENAMI_TVDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
+variables: `RENAMI_TMDB_API_KEY`, `RENAMI_OMDB_API_KEY`,
 `RENAMI_OPENSUBTITLES_API_KEY`, `RENAMI_ACOUSTID_API_KEY`.
 
 ## Datasources and API keys
@@ -112,7 +112,6 @@ sign-up page) and a **Test** button (validates the key with a live lookup).
 | **Kitsu** | none | free | anime, AniDB-derived data |
 | **TMDb** | free, instant | free for personal use | movies **and** TV — the one key worth adding |
 | **OMDb** | free, by email | free, 1 000 lookups/day | IMDb data |
-| **TheTVDB** | project key only | effectively paid: each user needs a TVDB subscription + PIN (`tvdb.user.pin`) | TV shows |
 | **OpenSubtitles** | free account | free | the Subtitles view only |
 
 `--db auto` consults the keyed providers you configured first, then TVmaze, then Kitsu —
@@ -124,8 +123,8 @@ key, because TVmaze has no public movie endpoint.
 - 🎬 **Media scanning** — recursive folder scan, video/audio detection
 - 🔍 **Filename parsing** — `S01E02`, `1x02`, `102`, anime absolute `Show - 05` patterns,
   year, quality-token stripping
-- 📡 **Metadata lookup** — TMDb, TheTVDB v4 (incl. aired/dvd/absolute episode orders),
-  OMDb, TVmaze (**no API key needed**), Kitsu (anime, **no API key needed**), plus an
+- 📡 **Metadata lookup** — TMDb (movies **and** TV), OMDb, TVmaze (**no API key needed**),
+  Kitsu (anime with absolute episode orders, **no API key needed**), plus an
   offline `local` datasource; `--db auto` chains keyed providers first, then the
   key-free ones, so a fresh install resolves TV with zero configuration;
   24 h HTTP response cache
